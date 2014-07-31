@@ -4,52 +4,52 @@ var logger = require('./loggingservice.js');
 
 var pusher = function(pushOver) {
 
-    if(pushOver.pushUserId && pushOver.pushAppToken) {
+  if(pushOver.pushUserId && pushOver.pushAppToken) {
 
-        var userId = pushOver.pushUserId
-        var appToken = pushOver.pushAppToken;
+    var userId = pushOver.pushUserId;
+    var appToken = pushOver.pushAppToken;
 
-        this.p = new push( {
-        user: userId,
-        token: appToken
-        });
+    this.p = new push( {
+      user: userId,
+      token: appToken
+    });
 
-        this.configured = true;
+    this.configured = true;
 
-    } else {
+  } else {
 
-        this.configured = false;
+    this.configured = false;
 
-    }
+  }
 
-    _.bindAll(this, 'send');
+  _.bindAll(this, 'send');
 
 };
 
 pusher.prototype.send = function(title, message, sound, priority) {
 
-    if(this.configured) {
+  if(this.configured) {
 
-        var msg = {
-        message: message,
-        title: title,
-        sound: title, // optional
-        priority: priority // optional
-        };
+    var msg = {
+      message: message,
+      title: title,
+      sound: title, // optional
+      priority: priority // optional
+    };
 
-        this.p.send( msg, function( err, result ) {
-        if ( err ) {
-            throw err;
-        }
+    this.p.send( msg, function( err, result ) {
+      if ( err ) {
+        throw err;
+      }
 
-        logger.log('Push notification sent!');
-        });
+      logger.log('Push notification sent!');
+    });
 
-    } else {
+  } else {
 
-        logger.log('Push Service Misconfigured');
+    logger.log('Push Service Misconfigured');
 
-    }
+  }
 
 };
 

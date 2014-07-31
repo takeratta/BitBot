@@ -39,8 +39,8 @@ tradingagent.prototype.order = function(orderType) {
 		} else {
 			this.placeSimulatedOrder();
 		}
-		
-	}
+
+	};
 
 	async.series(
 		{
@@ -65,7 +65,7 @@ tradingagent.prototype.calculateOrder = function(result) {
 	var maxClose = Number(BigNumber(lastClose).times(BigNumber(1.0025)).round(2));
 
 	logger.log('Preparing to place a ' + this.orderDetails.orderType + ' order! (' + this.currencyPair.asset + ' Balance: ' + this.orderDetails.assetBalance + ' ' + this.currencyPair.currency + ' Balance: ' + this.orderDetails.currencyBalance + ' Trading Fee: ' + this.orderDetails.tradingFee +')');
-	                        
+
 	if(this.orderDetails.orderType === 'buy') {
 
 		//var lowestAsk = _.first(orderBook.asks)[0];
@@ -83,10 +83,10 @@ tradingagent.prototype.calculateOrder = function(result) {
 		var balance = (BigNumber(this.orderDetails.currencyBalance).minus(BigNumber(this.tradingReserveCurrency))).times(BigNumber(1).minus(BigNumber(this.orderDetails.tradingFee).dividedBy(BigNumber(100))));
 
 		logger.log('Lowest Ask: ' + lowestAsk + ' Lowest Ask With Slippage: ' + lowestAskWithSlippage);
-		                            
+
 		this.orderDetails.price = lowestAskWithSlippage;
 		this.orderDetails.amount = Number(balance.dividedBy(BigNumber(this.orderDetails.price)).minus(BigNumber(0.005)).round(2));
-		                            
+
 	} else if(this.orderDetails.orderType === 'sell') {
 
 		//var highestBid = _.first(orderBook.bids)[0];
@@ -103,24 +103,24 @@ tradingagent.prototype.calculateOrder = function(result) {
 		var highestBidWithSlippage = Number(BigNumber(highestBid).times(BigNumber(1).minus(BigNumber(this.slippagePercentage).dividedBy(BigNumber(100)))).round(2));
 
 		logger.log('Highest Bid: ' + highestBid + ' Highest Bid With Slippage: ' + highestBidWithSlippage);
-		                            
+
 		this.orderDetails.price = highestBidWithSlippage;
 		this.orderDetails.amount = Number(BigNumber(this.orderDetails.assetBalance).minus(BigNumber(this.tradingReserveAsset)));
-		
+
 	}
 
 };
 
 tradingagent.prototype.placeRealOrder = function() {
-    
+
 	if(this.orderDetails.amount <= 0) {
 
-		logger.log('Insufficient funds to place an order.')
+		logger.log('Insufficient funds to place an order.');
 
 	} else {
 
 		api.placeOrder(this.orderDetails.orderType, this.orderDetails.amount, this.orderDetails.price, this.processOrder);
-	        
+
 	}
 
 };
@@ -129,9 +129,11 @@ tradingagent.prototype.placeSimulatedOrder = function() {
 
 	if(this.orderDetails.amount <= 0) {
 
-		logger.log('Insufficient funds to place an order.')
+		logger.log('Insufficient funds to place an order.');
 
 	} else {
+
+		this.orderDetails.order = 'Simulated';
 
 		logger.log('Placed simulated ' + this.orderDetails.orderType + ' order: (' + this.orderDetails.amount + '@' + this.orderDetails.price + ')');
 
@@ -154,7 +156,7 @@ tradingagent.prototype.processOrder = function(err, order) {
 		logger.log('Placed ' + this.orderDetails.orderType + ' order: ' + this.orderDetails.order + ' (' + this.orderDetails.amount + '@' + this.orderDetails.price + ')');
 
 		this.emit('realOrder', this.orderDetails);
-        
+
 	}
 
 };

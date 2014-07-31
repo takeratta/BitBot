@@ -18,7 +18,7 @@ var config = require('./config.js');
 var retriever = new dataretriever(config.downloaderRefreshSeconds);
 var processor = new dataprocessor(config.candleStickSizeMinutes);
 var aggregator = new candleaggregator(config.candleStickSizeMinutes);
-var advisor = new tradingadvisor(config.indicatorSettings, config.candleStickSizeMinutes);
+var advisor = new tradingadvisor(config.indicatorSettings, config.candleStickSizeMinutes, false);
 var agent = new tradingagent(config.tradingEnabled, config.exchangeSettings);
 var pusher = new pushservice(config.pushOver);
 var monitor = new ordermonitor();
@@ -28,7 +28,7 @@ var pricemon = new pricemonitor(config.stoplossSettings.percentageBought, config
 
 //------------------------------AnnounceStart
 console.log('------------------------------------------');
-console.log('Starting BitBot v0.6.0');
+console.log('Starting BitBot v0.7.0');
 console.log('Real Trading Enabled = ' + config.tradingEnabled);
 console.log('Working Dir = ' + process.cwd());
 console.log('------------------------------------------');
@@ -83,7 +83,7 @@ advisor.on('advice', function(advice){
     if(advice === 'buy') {
 
         agent.order(advice);
-        
+
     } else if(advice === 'sell') {
 
         agent.order(advice);
@@ -97,22 +97,18 @@ agent.on('realOrder',function(orderDetails){
     if(config.pushOver.enabled) {
         pusher.send('BitBot - Order Placed!', 'Placed ' + orderDetails.orderType + ' order: (' + orderDetails.amount + '@' + orderDetails.price + ')', 'magic', 1);
     }
-    
+
     monitor.add(orderDetails, config.orderKeepAliveMinutes);
 
 });
 
 agent.on('simulatedOrder',function(orderDetails){
-    
+
     if(config.pushOver.enabled) {
         pusher.send('BitBot - Order Simulated!', 'Simulated ' + orderDetails.orderType + ' order: (' + orderDetails.amount + '@' + orderDetails.price + ')', 'magic', 1);
     }
 
-    orderDetails.order = 'Simulated';
-
     monitor.add(orderDetails, config.orderKeepAliveMinutes);
-
-    reporter.updateBalance(true);
 
 });
 
@@ -149,7 +145,7 @@ pricemon.on('advice', function(advice) {
     if(advice === 'buy') {
 
         agent.order(advice);
-        
+
     } else if(advice === 'sell') {
 
         agent.order(advice);
@@ -160,7 +156,7 @@ pricemon.on('advice', function(advice) {
 
 reporter.on('update', function(update){
 
-    
+
 
 });
 

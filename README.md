@@ -28,7 +28,7 @@ When running the bot initially make sure to run with real trading disabled:
 
 	config.tradingEnabled = false;
 
-Choose an exhange you want to trade on in the exchangeSettings:
+Choose an exchange you want to trade on in the exchangeSettings:
 
 	exchange: '',
 	// Options: (bitstamp, kraken)
@@ -70,6 +70,41 @@ Please read up on the following articles to help you choose the settings that be
 
 - [Candlesticks](http://en.wikipedia.org/wiki/Candlestick_chart)
 - [MACD](http://en.wikipedia.org/wiki/MACD)
+
+As of version 0.7 BitBot now uses indicators as small plugins. You can create your own indicator by using the following template:
+
+	var _ = require('underscore');
+	var BigNumber = require('bignumber.js');
+
+	var indicator = function(options) {
+
+		this.options = options;
+
+		_.bindAll(this, 'calculate');
+
+		// indicatorOptions
+		// options: {The options required for your indicator to work}
+
+	};
+
+	//-------------------------------------------------------------------------------HelperFunctions
+
+		// Insert your helper functions here if needed
+
+	//-------------------------------------------------------------------------------HelperFunctions
+
+	indicator.prototype.calculate = function(cs) {
+
+		// This function receives a candlestick from the trading advisor, this is the layout of a candlestick:
+		// {'period':timestamp, 'open':open price, 'high':high price, 'low':low price, 'close':close price, 'volume':volume, 'vwap':volume weighted average price}
+
+		// Insert your calculation logic here
+
+	};
+
+	module.exports = indicator;
+
+For examples on how to use this template, go have a look at one of the existing indicators in the indicators folder.
 
 # Usage
 

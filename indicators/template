@@ -1,0 +1,30 @@
+var _ = require('underscore');
+var BigNumber = require('bignumber.js');
+
+var indicator = function(options) {
+
+  this.options = options;
+
+  _.bindAll(this, 'calculate');
+
+  // indicatorOptions
+  // options: {The options required for your indicator to work}
+
+};
+
+//-------------------------------------------------------------------------------HelperFunctions
+
+  // Insert your helper functions here if needed
+
+//-------------------------------------------------------------------------------HelperFunctions
+
+indicator.prototype.calculate = function(cs) {
+
+  // This function receives a candlestick from the trading advisor, this is the layout of a candlestick:
+  // {'period':timestamp, 'open':open price, 'high':high price, 'low':low price, 'close':close price, 'volume':volume, 'vwap':volume weighted average price}
+
+  // Insert your calculation logic here
+
+};
+
+module.exports = indicator;

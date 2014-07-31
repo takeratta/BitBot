@@ -6,14 +6,14 @@ var storage = require('./candlestorage.js');
 
 var pricemonitor = function(slPercentageB, slPercentageS, candleStickSizeMinutes) {
 
-    this.percentageBought = slPercentageB;
-    this.percentageSold = slPercentageS;
-    this.candleStickSizeMinutes = candleStickSizeMinutes;
+  this.percentageBought = slPercentageB;
+  this.percentageSold = slPercentageS;
+  this.candleStickSizeMinutes = candleStickSizeMinutes;
 
-    this.position = 'none';
+  this.position = 'none';
 
-    _.bindAll(this, 'check', 'setPosition', 'update');
-    
+  _.bindAll(this, 'check', 'setPosition', 'update');
+
 };
 
 //---EventEmitter Setup
@@ -24,79 +24,81 @@ Util.inherits(pricemonitor, EventEmitter);
 
 pricemonitor.prototype.check = function(price) {
 
-    if(this.position === 'bought') {
+  if(this.position === 'bought') {
 
-        if(price <= this.checkPriceBought) {
-            logger.log('Stop Loss triggered (Long Entry: ' + this.posPrice + ' Exit: ' + price + ')');
-            this.position = 'none';
-            this.posPrice = 0;
-            this.emit('advice', 'sell');
-        }
-
-    } else if(this.position === 'sold') {
-
-        if(price >= this.checkPriceSold) {
-            logger.log('Stop Loss triggered (Short Entry: ' + this.posPrice + ' Exit: ' + price + ')');
-            this.position = 'none';
-            this.posPrice = 0;
-            this.emit('advice', 'buy');
-        }
-
-    } else {
-
-        this.emit('advice', 'hold');
-
+    if(price <= this.checkPriceBought) {
+      logger.log('Stop Loss triggered (Long Entry: ' + this.posPrice + ' Exit: ' + price + ')');
+      this.position = 'none';
+      this.posPrice = 0;
+      this.emit('advice', 'sell');
     }
+    
+  } else if(this.position === 'sold') {
+
+    if(price >= this.checkPriceSold) {
+      logger.log('Stop Loss triggered (Short Entry: ' + this.posPrice + ' Exit: ' + price + ')');
+      this.position = 'none';
+      this.posPrice = 0;
+      this.emit('advice', 'buy');
+    }
+
+  } else {
+
+    this.emit('advice', 'hold');
+
+  }
 
 };
 
 pricemonitor.prototype.setPosition = function(pos, price) {
 
-    if(pos === 'bought') {
+  if(pos === 'bought') {
 
-        this.position = 'bought'
-        this.posPrice = price;
-        this.checkPriceBought = Number(BigNumber(this.posPrice).times(BigNumber(1).minus(BigNumber(this.percentageBought).dividedBy(BigNumber(100)))));
+    this.position = 'bought';
+    this.posPrice = price;
+    this.checkPriceBought = Number(BigNumber(this.posPrice).times(BigNumber(1).minus(BigNumber(this.percentageBought).dividedBy(BigNumber(100)))));
 
-    } else if(pos === 'sold') {
+  } else if(pos === 'sold') {
 
-        this.position = 'sold';
-        this.posPrice = price;
-        this.checkPriceSold = Number(BigNumber(this.posPrice).times(BigNumber(1).plus(BigNumber(this.percentageSold).dividedBy(BigNumber(100)))));
+    this.position = 'sold';
+    this.posPrice = price;
+    this.checkPriceSold = Number(BigNumber(this.posPrice).times(BigNumber(1).plus(BigNumber(this.percentageSold).dividedBy(BigNumber(100)))));
 
-    }
+  }
 
 };
 
 pricemonitor.prototype.update = function(cs) {
 
-    var diff = cs.close - cs.open;
-    var size = Math.abs(Number(BigNumber(cs.close).minus(BigNumber(cs.open)).round(2)));
-    var averageSize = storage.getAverageCandleStickSize(10, this.candleStickSizeMinutes);
+  var diff = cs.close - cs.open;
+  var size = Math.abs(Number(BigNumber(cs.close).minus(BigNumber(cs.open)).round(2)));
+  var averageSize = storage.getAverageCandleStickSize(10, this.candleStickSizeMinutes);
 
-    var change = Number(BigNumber(size).dividedBy(2).round(2));
+  var change = Number(BigNumber(size).dividedBy(2).round(2));
 
-    if(size >= averageSize * 2) {
+  var newSl;
 
-        if(this.position === 'bought' && diff > 0) {
+  if(size >= averageSize * 2) {
 
-            var newSl = Number(BigNumber(this.checkPriceBought).plus(change));
+    if(this.position === 'bought' && diff > 0) {
 
-            logger.log('Stop loss increased! Old: ' + this.checkPriceBought + ' New: ' + newSl);
+      newSl = Number(BigNumber(this.checkPriceBought).plus(change));
 
-            this.checkPriceBought = newSl;
+      logger.log('Stop loss increased! Old: ' + this.checkPriceBought + ' New: ' + newSl);
 
-        } else if(this.position === 'sold' && diff < 0) {
+      this.checkPriceBought = newSl;
 
-            var newSl = Number(BigNumber(this.checkPriceSold).minus(change));
+    } else if(this.position === 'sold' && diff < 0) {
 
-            logger.log('Stop loss decreased! Old: ' + this.checkPriceSold + ' New: ' + newSl);
+      newSl = Number(BigNumber(this.checkPriceSold).minus(change));
 
-            this.checkPriceSold = newSl;
+      logger.log('Stop loss decreased! Old: ' + this.checkPriceSold + ' New: ' + newSl);
 
-        }
+      this.checkPriceSold = newSl;
 
     }
+
+  }
 
 };
 

@@ -51,10 +51,9 @@ config.orderKeepAliveMinutes = config.candleStickSizeMinutes / 10;
 //------------------------------IndicatorSettings
 config.indicatorSettings = {
 	indicator: 'MACD',
-	// Options: (MACD, PPO)
-	options: {neededPeriods: 26, longPeriods: 26, shortPeriods: 12, emaPeriods: 9},
-	buyTreshold: 0,
-	sellTreshold: 0
+	// Choises: Any indicator from the indicators folder
+	options: {neededPeriods: 26, longPeriods: 26, shortPeriods: 12, emaPeriods: 9, buyTreshold: 0, sellTreshold: 0}
+	// Options needed for your indicator (Look them up in the indicator's file)
 };
 //------------------------------IndicatorSettings
 
@@ -63,7 +62,7 @@ config.stoplossSettings = {
 	enabled: false,
 	percentageBought: 1,
 	percentageSold: 1
-}
+};
 //------------------------------stopLossSettings
 
 //------------------------------PushOver

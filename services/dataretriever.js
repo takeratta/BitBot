@@ -5,9 +5,9 @@ var api = require('./api.js');
 
 var downloader = function(refreshInterval){
 
-    this.refreshInterval = refreshInterval;
+  this.refreshInterval = refreshInterval;
 
-    _.bindAll(this, 'start', 'stop', 'processTrades');
+  _.bindAll(this, 'start', 'stop', 'processTrades');
 
 };
 
@@ -19,31 +19,31 @@ Util.inherits(downloader, EventEmitter);
 
 downloader.prototype.processTrades = function(err, trades) {
 
-    if(!err) {
+  if(!err) {
 
-        this.emit('update', trades);
+    this.emit('update', trades);
 
-    }
+  }
 
 };
 
 downloader.prototype.start = function() {
 
-    logger.log('Downloader started!');
-    
+  logger.log('Downloader started!');
+
+  api.getTrades(this.processTrades);
+
+  this.downloadInterval = setInterval(function(){
     api.getTrades(this.processTrades);
-    
-    this.downloadInterval = setInterval(function(){
-        api.getTrades(this.processTrades);
-    }.bind(this),1000 * this.refreshInterval);
+  }.bind(this),1000 * this.refreshInterval);
 
 };
 
 downloader.prototype.stop = function() {
 
-    clearInterval(this.downloadInterval);
+  clearInterval(this.downloadInterval);
 
-    logger.log('Downloader stopped!');
+  logger.log('Downloader stopped!');
 
 };
 
