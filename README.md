@@ -100,6 +100,9 @@ As of version 0.7 BitBot now uses indicators as small plugins. You can create yo
 
 		// Insert your calculation logic here
 
+		// When done you should always return either 'buy', 'sell' or 'hold'
+		return advice;
+
 	};
 
 	module.exports = indicator;

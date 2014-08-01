@@ -29,7 +29,7 @@ var api = function() {
 
     logger.error('Invalid exchange, exiting!');
     return process.exit();
-    
+
   }
 
   this.q = async.queue(function (task, callback) {
@@ -80,7 +80,7 @@ api.prototype.errorHandler = function(method, receivedArgs, retryAllowed, cb) {
       } else {
 
         logger.error('Couldn\'t connect to the API.');
-        cb(err, result);
+        //cb(err, result);
         return logger.error(JSON.stringify(err).substring(0,99));
 
       }

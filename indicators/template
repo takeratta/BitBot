@@ -25,6 +25,9 @@ indicator.prototype.calculate = function(cs) {
 
   // Insert your calculation logic here
 
+  // When done you should always return either 'buy', 'sell' or 'hold'
+  return advice;
+
 };
 
 module.exports = indicator;
