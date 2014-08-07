@@ -146,7 +146,7 @@ processor.on('initialized', function(){
         totalBalanceInBTC = Number(BigNumber(BTCBalance).plus(BigNumber(USDBalance).dividedBy(BigNumber(lastClose))).round(2));
         profit = Number(BigNumber(totalBalanceInUSD).minus(BigNumber(initialBalance)).round(2));
         profitPercentage = Number(BigNumber(profit).dividedBy(BigNumber(initialBalance)).times(BigNumber(100)).round(2));
-        totalFeeCostsPercentage = Number(BigNumber(totalFeeCosts).dividedBy(BigNumber(profit)).times(BigNumber(100)).round(2));
+        totalFeeCostsPercentage = Number(BigNumber(totalFeeCosts).dividedBy(BigNumber(initialBalance)).times(BigNumber(100)).round(2));
 
         logger.log('----------Report----------');
         logger.log('Transaction Fee: ' + transactionFee + '%');
