@@ -31,6 +31,8 @@ var totalBalanceInBTC = 0;
 var profit = 0;
 var profitPercentage = 0;
 var transactionFee = 0;
+var totalFeeCosts = 0;
+var totalFeeCostsPercentage = 0;
 var transactions = 0;
 var slTransactions = 0;
 var lastClose = 0;
@@ -39,7 +41,7 @@ var csPeriod = 0;
 
 //------------------------------AnnounceStart
 console.log('------------------------------------------');
-console.log('Starting BitBot Back-Tester v0.7.0');
+console.log('Starting BitBot Back-Tester v0.7.1');
 console.log('Working Dir = ' + process.cwd());
 console.log('------------------------------------------');
 //------------------------------AnnounceStart
@@ -51,6 +53,8 @@ var createOrder = function(type, stopLoss) {
   if(type === 'buy' && USDBalance !== 0) {
 
       usableBalance = Number(BigNumber(USDBalance).times(BigNumber(1).minus(BigNumber(transactionFee).dividedBy(BigNumber(100)))));
+
+      totalFeeCosts = Number(BigNumber(totalFeeCosts).plus(BigNumber(USDBalance).times(BigNumber(transactionFee).dividedBy(BigNumber(100))).round(2)));
 
       BTCBalance = Number(BigNumber(BTCBalance).plus(BigNumber(usableBalance).dividedBy(BigNumber(lastClose)).round(2)));
       USDBalance = 0;
@@ -69,6 +73,8 @@ var createOrder = function(type, stopLoss) {
   } else if(type === 'sell' && BTCBalance !== 0) {
 
       usableBalance = Number(BigNumber(BTCBalance).times(BigNumber(1).minus(BigNumber(transactionFee).dividedBy(BigNumber(100)))));
+
+      totalFeeCosts = Number(BigNumber(totalFeeCosts).plus(BigNumber(BTCBalance).times(BigNumber(transactionFee).dividedBy(BigNumber(100))).times(lastClose).round(2)));
 
       USDBalance = Number(BigNumber(USDBalance).plus(BigNumber(usableBalance).times(BigNumber(lastClose)).round(2)));
       BTCBalance = 0;
@@ -140,6 +146,7 @@ processor.on('initialized', function(){
         totalBalanceInBTC = Number(BigNumber(BTCBalance).plus(BigNumber(USDBalance).dividedBy(BigNumber(lastClose))).round(2));
         profit = Number(BigNumber(totalBalanceInUSD).minus(BigNumber(initialBalance)).round(2));
         profitPercentage = Number(BigNumber(profit).dividedBy(BigNumber(initialBalance)).times(BigNumber(100)).round(2));
+        totalFeeCostsPercentage = Number(BigNumber(totalFeeCosts).dividedBy(BigNumber(profit)).times(BigNumber(100)).round(2));
 
         logger.log('----------Report----------');
         logger.log('Transaction Fee: ' + transactionFee + '%');
@@ -148,6 +155,7 @@ processor.on('initialized', function(){
         logger.log('Final Balance: ' + totalBalanceInUSD);
         logger.log('Final Balance BTC: ' + totalBalanceInBTC);
         logger.log('Profit: ' + profit + ' (' + profitPercentage + '%)');
+        logger.log('Lost on fees: ' + totalFeeCosts + ' (' + totalFeeCostsPercentage + '%)');
         logger.log('Open Price: ' + _.first(loopArray).open);
         logger.log('Close Price: ' + _.last(loopArray).close);
         logger.log('Transactions: ' + transactions);
