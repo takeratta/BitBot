@@ -1,4 +1,6 @@
 var _ = require('underscore');
+var BigNumber = require('bignumber.js');
+var moment = require('moment');
 
 var dataprocessor = require('./services/dataprocessor.js');
 var tradingadvisor = require('./services/tradingadvisor.js');
@@ -7,7 +9,6 @@ var storage = require('./services/candlestorage.js');
 var logger = require('./services/loggingservice.js');
 var pricemonitor = require('./services/pricemonitor.js');
 var api = require('./services/api.js');
-var BigNumber = require('bignumber.js');
 
 //------------------------------Config
 var config = require('./config.js');
@@ -30,6 +31,8 @@ var totalBalanceInUSD = 0;
 var totalBalanceInBTC = 0;
 var profit = 0;
 var profitPercentage = 0;
+var bhProfit = 0;
+var bhProfitPercentage = 0;
 var transactionFee = 0;
 var totalFeeCosts = 0;
 var totalFeeCostsPercentage = 0;
@@ -37,11 +40,23 @@ var transactions = 0;
 var slTransactions = 0;
 var lastClose = 0;
 var csPeriod = 0;
+var entryUSD = 0;
+var exitUSD = 0;
+var winners = 0;
+var losers = 0;
+var bigWinner = 0;
+var bigLoser = 0;
+var totalGain = 0;
+var totalLoss = 0;
+var averageGain = 0;
+var averageLoss = 0;
+var startDate;
+var endDate;
 //------------------------------IntializeVariables
 
 //------------------------------AnnounceStart
 console.log('------------------------------------------');
-console.log('Starting BitBot Back-Tester v0.7.1');
+console.log('Starting BitBot Back-Tester v0.7.2');
 console.log('Working Dir = ' + process.cwd());
 console.log('------------------------------------------');
 //------------------------------AnnounceStart
@@ -51,6 +66,8 @@ var createOrder = function(type, stopLoss) {
   var usableBalance = 0;
 
   if(type === 'buy' && USDBalance !== 0) {
+
+      entryUSD = USDBalance;
 
       usableBalance = Number(BigNumber(USDBalance).times(BigNumber(1).minus(BigNumber(transactionFee).dividedBy(BigNumber(100)))));
 
@@ -78,6 +95,20 @@ var createOrder = function(type, stopLoss) {
 
       USDBalance = Number(BigNumber(USDBalance).plus(BigNumber(usableBalance).times(BigNumber(lastClose)).round(2)));
       BTCBalance = 0;
+
+      exitUSD = USDBalance;
+
+      var tradeResult = Number(BigNumber(exitUSD).minus(BigNumber(entryUSD)).round(2));
+
+      if(exitUSD > entryUSD) {
+        winners += 1;
+        totalGain = Number(BigNumber(totalGain).plus(BigNumber(tradeResult)).round(2));
+        if(tradeResult > bigWinner) {bigWinner = tradeResult;}
+      } else {
+        losers += 1;
+        totalLoss = Number(BigNumber(totalLoss).plus(BigNumber(tradeResult)).round(2));
+        if(tradeResult < bigLoser) {bigLoser = tradeResult;}
+      }
 
       transactions += 1;
 
@@ -147,6 +178,14 @@ processor.on('initialized', function(){
         profit = Number(BigNumber(totalBalanceInUSD).minus(BigNumber(initialBalance)).round(2));
         profitPercentage = Number(BigNumber(profit).dividedBy(BigNumber(initialBalance)).times(BigNumber(100)).round(2));
         totalFeeCostsPercentage = Number(BigNumber(totalFeeCosts).dividedBy(BigNumber(initialBalance)).times(BigNumber(100)).round(2));
+        bhProfit = Number(BigNumber(_.last(loopArray).close).minus(_.first(loopArray).open).round(2));
+        bhProfitPercentage = Number(BigNumber(bhProfit).dividedBy(BigNumber(initialBalance)).times(BigNumber(100)).round(2));
+
+        startDate = moment(new Date(_.first(loopArray).period*1000)).format('DD-MM-YYYY HH:mm:ss');
+        endDate = moment(new Date(_.last(loopArray).period*1000)).format('DD-MM-YYYY HH:mm:ss');
+
+        averageGain = Number(BigNumber(totalGain).dividedBy(winners).round(2));
+        averageLoss = Number(BigNumber(totalLoss).dividedBy(losers).round(2));
 
         logger.log('----------Report----------');
         logger.log('Transaction Fee: ' + transactionFee + '%');
@@ -154,10 +193,15 @@ processor.on('initialized', function(){
         logger.log('Initial Balance BTC: ' + intialBalanceBTC);
         logger.log('Final Balance: ' + totalBalanceInUSD);
         logger.log('Final Balance BTC: ' + totalBalanceInBTC);
+        logger.log('Winning trades : ' + winners + ' Losing trades: ' + losers);
+        logger.log('Biggest winner: ' + bigWinner + ' Biggest loser: ' + bigLoser);
+        logger.log('Average winner: ' + averageGain + ' Average loser: ' + averageLoss);
         logger.log('Profit: ' + profit + ' (' + profitPercentage + '%)');
+        logger.log('Buy and Hold Profit: ' + bhProfit + ' (' + bhProfitPercentage + '%)');
         logger.log('Lost on fees: ' + totalFeeCosts + ' (' + totalFeeCostsPercentage + '%)');
         logger.log('Open Price: ' + _.first(loopArray).open);
         logger.log('Close Price: ' + _.last(loopArray).close);
+        logger.log('Start - End Date: ' + startDate + ' - ' + endDate);
         logger.log('Transactions: ' + transactions);
         logger.log('Stop Loss Transactions: ' + slTransactions);
         logger.log('--------------------------');
