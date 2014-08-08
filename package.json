@@ -1,6 +1,6 @@
 {
   "name": "BitBot",
-  "version": "0.7.2",
+  "version": "0.7.3",
   "description": "Crypto-Currency Trading Bot",
   "main": "app.js",
   "dependencies": {

@@ -56,7 +56,7 @@ var endDate;
 
 //------------------------------AnnounceStart
 console.log('------------------------------------------');
-console.log('Starting BitBot Back-Tester v0.7.2');
+console.log('Starting BitBot Back-Tester v0.7.3');
 console.log('Working Dir = ' + process.cwd());
 console.log('------------------------------------------');
 //------------------------------AnnounceStart
@@ -86,6 +86,7 @@ var createOrder = function(type, stopLoss) {
       logger.log('Placed buy order ' + BTCBalance + ' @ ' + lastClose);
 
       pricemon.setPosition('bought', lastClose);
+      advisor.setPosition({pos: 'bought', price: lastClose});
 
   } else if(type === 'sell' && BTCBalance !== 0) {
 
@@ -120,6 +121,7 @@ var createOrder = function(type, stopLoss) {
       logger.log('Placed sell order ' + usableBalance + ' @ ' + lastClose);
 
       pricemon.setPosition('sold', lastClose);
+      advisor.setPosition({pos: 'sold', price: lastClose});
 
   } else {
 

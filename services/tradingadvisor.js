@@ -18,7 +18,7 @@ var advisor = function(indicatorSettings, candleStickSize, backTesting) {
 		process.exit();
 	}
 
-	_.bindAll(this, 'start', 'update');
+	_.bindAll(this, 'start', 'update', 'setPosition');
 
 };
 
@@ -57,6 +57,12 @@ advisor.prototype.update = function(cs) {
 		logger.error(err.stack);
 		process.exit();
 	}
+
+};
+
+advisor.prototype.setPosition = function(pos) {
+
+	this.selectedIndicator.setPosition(pos);
 
 };
 

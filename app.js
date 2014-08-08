@@ -28,7 +28,7 @@ var pricemon = new pricemonitor(config.stoplossSettings.percentageBought, config
 
 //------------------------------AnnounceStart
 console.log('------------------------------------------');
-console.log('Starting BitBot v0.7.2');
+console.log('Starting BitBot v0.7.3');
 console.log('Real Trading Enabled = ' + config.tradingEnabled);
 console.log('Working Dir = ' + process.cwd());
 console.log('------------------------------------------');
@@ -117,10 +117,12 @@ monitor.on('filled', function(order) {
     if(order.orderDetails.orderType === 'buy') {
 
         pricemon.setPosition('bought', order.orderDetails.price);
+        advisor.setPosition({pos: 'bought', price: order.orderDetails.price});
 
     } else if(order.orderDetails.orderType === 'sell') {
 
         pricemon.setPosition('sold', order.orderDetails.price);
+        advisor.setPosition({pos: 'sold', price: order.orderDetails.price});
 
     }
 

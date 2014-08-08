@@ -4,8 +4,9 @@ var BigNumber = require('bignumber.js');
 var indicator = function(options) {
 
   this.options = options;
+  this.position = {};
 
-  _.bindAll(this, 'calculate');
+  _.bindAll(this, 'calculate', 'setPosition');
 
   // indicatorOptions
   // options: {The options required for your indicator to work}
@@ -27,6 +28,16 @@ indicator.prototype.calculate = function(cs) {
 
   // When done you should always return either 'buy', 'sell' or 'hold'
   return advice;
+
+};
+
+indicator.prototype.setPosition = function(pos) {
+
+  // This function is required and shouldn't be changed unless you know what you are doing.
+  // Provides the indicator with information qbout the current position.
+  // {pos: position, price: price}
+
+  this.position = pos;
 
 };
 

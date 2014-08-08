@@ -73,14 +73,15 @@ Please read up on the following articles to help you choose the settings that be
 
 As of version 0.7 BitBot now uses indicators as small plugins. You can create your own indicator by using the following template:
 
-	var _ = require('underscore');
-	var BigNumber = require('bignumber.js');
+var _ = require('underscore');
+var BigNumber = require('bignumber.js');
 
 	var indicator = function(options) {
 
 		this.options = options;
+		this.position = {};
 
-		_.bindAll(this, 'calculate');
+		_.bindAll(this, 'calculate', 'setPosition');
 
 		// indicatorOptions
 		// options: {The options required for your indicator to work}
@@ -102,6 +103,16 @@ As of version 0.7 BitBot now uses indicators as small plugins. You can create yo
 
 		// When done you should always return either 'buy', 'sell' or 'hold'
 		return advice;
+
+	};
+
+	indicator.prototype.setPosition = function(pos) {
+
+		// This function is required and shouldn't be changed unless you know what you are doing.
+		// Provides the indicator with information qbout the current position.
+		// {pos: position, price: price}
+
+		this.position = pos;
 
 	};
 

@@ -4,12 +4,13 @@ var BigNumber = require('bignumber.js');
 var indicator = function(options) {
 
   this.options = options;
+  this.position = {};
   this.indicator = {};
   this.previousIndicator = {};
   this.advice = 'hold';
   this.length = 0;
 
-  _.bindAll(this, 'calculate');
+  _.bindAll(this, 'calculate', 'setPosition');
 
   // indicatorOptions
   // options: {neededPeriods: number, longPeriods: number, shortPeriods: number, emaPeriods: number, buyTreshold: number, sellTreshold: number}
@@ -70,6 +71,12 @@ indicator.prototype.calculate = function(cs) {
     return 'hold';
 
   }
+
+};
+
+indicator.prototype.setPosition = function(pos) {
+
+  this.position = pos;
 
 };
 
