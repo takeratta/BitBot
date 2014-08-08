@@ -109,7 +109,7 @@ var BigNumber = require('bignumber.js');
 	indicator.prototype.setPosition = function(pos) {
 
 		// This function is required and shouldn't be changed unless you know what you are doing.
-		// Provides the indicator with information qbout the current position.
+		// Provides the indicator with information about the current position.
 		// {pos: position, price: price}
 
 		this.position = pos;
