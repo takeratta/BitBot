@@ -325,6 +325,16 @@ storage.prototype.getAggregatedCandleSticks = function(candleStickSize) {
 
 		},this);
 
+		var vrelevantSticks = _.filter(relevantSticks, function(candleStick) {
+
+			return candleStick.volume > 0;
+
+		},this);
+
+		if(vrelevantSticks.length > 0) {
+			relevantSticks = vrelevantSticks;
+		}
+
 		currentCandleStick.open = relevantSticks[0].open;
 		currentCandleStick.high = _.max(relevantSticks, function(relevantStick) { return relevantStick.high; }).high;
 		currentCandleStick.low = _.min(relevantSticks, function(relevantStick) { return relevantStick.low; }).low;

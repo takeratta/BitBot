@@ -34,6 +34,9 @@ var profitPercentage = 0;
 var bhProfit = 0;
 var bhProfitPercentage = 0;
 var transactionFee = 0;
+var totalTradedVolume = 0;
+var highestUSDValue = 0;
+var lowestUSDValue = USDBalance;
 var totalFeeCosts = 0;
 var totalFeeCostsPercentage = 0;
 var transactions = 0;
@@ -56,7 +59,7 @@ var endDate;
 
 //------------------------------AnnounceStart
 console.log('------------------------------------------');
-console.log('Starting BitBot Back-Tester v0.7.3');
+console.log('Starting BitBot Back-Tester v0.7.4');
 console.log('Working Dir = ' + process.cwd());
 console.log('------------------------------------------');
 //------------------------------AnnounceStart
@@ -71,10 +74,20 @@ var createOrder = function(type, stopLoss) {
 
       usableBalance = Number(BigNumber(USDBalance).times(BigNumber(1).minus(BigNumber(transactionFee).dividedBy(BigNumber(100)))));
 
+      totalTradedVolume = Number(BigNumber(totalTradedVolume).plus(BigNumber(usableBalance)).round(2));
+
       totalFeeCosts = Number(BigNumber(totalFeeCosts).plus(BigNumber(USDBalance).times(BigNumber(transactionFee).dividedBy(BigNumber(100))).round(2)));
 
       BTCBalance = Number(BigNumber(BTCBalance).plus(BigNumber(usableBalance).dividedBy(BigNumber(lastClose)).round(2)));
       USDBalance = 0;
+
+      var newUSDBalance = Number(BigNumber(BTCBalance).times(BigNumber(lastClose)).round(2));
+
+      if(newUSDBalance > highestUSDValue) {
+        highestUSDValue = newUSDBalance;
+      } else if(newUSDBalance < lowestUSDValue) {
+        lowestUSDValue = newUSDBalance;
+      }
 
       transactions += 1;
 
@@ -92,10 +105,18 @@ var createOrder = function(type, stopLoss) {
 
       usableBalance = Number(BigNumber(BTCBalance).times(BigNumber(1).minus(BigNumber(transactionFee).dividedBy(BigNumber(100)))));
 
+      totalTradedVolume = Number(BigNumber(totalTradedVolume).plus(BigNumber(usableBalance).times(BigNumber(lastClose))).round(2));
+
       totalFeeCosts = Number(BigNumber(totalFeeCosts).plus(BigNumber(BTCBalance).times(BigNumber(transactionFee).dividedBy(BigNumber(100))).times(lastClose).round(2)));
 
       USDBalance = Number(BigNumber(USDBalance).plus(BigNumber(usableBalance).times(BigNumber(lastClose)).round(2)));
       BTCBalance = 0;
+
+      if(USDBalance > highestUSDValue) {
+        highestUSDValue = USDBalance;
+      } else if(USDBalance < lowestUSDValue) {
+        lowestUSDValue = USDBalance;
+      }
 
       exitUSD = USDBalance;
 
@@ -201,6 +222,8 @@ processor.on('initialized', function(){
         logger.log('Profit: ' + profit + ' (' + profitPercentage + '%)');
         logger.log('Buy and Hold Profit: ' + bhProfit + ' (' + bhProfitPercentage + '%)');
         logger.log('Lost on fees: ' + totalFeeCosts + ' (' + totalFeeCostsPercentage + '%)');
+        logger.log('Total traded volue: ' + totalTradedVolume);
+        logger.log('Highest - Lowest USD Balance: ' + highestUSDValue + ' - ' + lowestUSDValue);
         logger.log('Open Price: ' + _.first(loopArray).open);
         logger.log('Close Price: ' + _.last(loopArray).close);
         logger.log('Start - End Date: ' + startDate + ' - ' + endDate);
