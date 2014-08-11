@@ -54,11 +54,11 @@ api.prototype.retry = function(method, args) {
 
   // run the failed method again with the same
   // arguments after wait
-  setTimeout(function() { method.apply(self, args) }, 1000*15);
+  setTimeout(function() { method.apply(self, args); }, 1000*15);
 
 };
 
-api.prototype.errorHandler = function(method, receivedArgs, retryAllowed, cb) {
+api.prototype.errorHandler = function(method, receivedArgs, retryAllowed, caller, cb) {
 
   var args = _.toArray(receivedArgs);
 
@@ -73,13 +73,13 @@ api.prototype.errorHandler = function(method, receivedArgs, retryAllowed, cb) {
 
       } else if(retryAllowed) {
 
-        logger.error('Couldn\'t connect to the API, retrying in 15 seconds!');
+        logger.error(caller + ' Couldn\'t connect to the API, retrying in 15 seconds!');
         logger.error(JSON.stringify(err).substring(0,99));
         return this.retry(method, args);
 
       } else {
 
-        logger.error('Couldn\'t connect to the API.');
+        logger.error(caller + ' Couldn\'t connect to the API.');
         //cb(err, result);
         return logger.error(JSON.stringify(err).substring(0,99));
 
@@ -128,7 +128,7 @@ api.prototype.getTrades = function(cb) {
 
       };
 
-      this.bitstamp.transactions({time: 'hour'}, this.errorHandler(this.getTrades, args, false, handler));
+      this.bitstamp.transactions({time: 'hour'}, this.errorHandler(this.getTrades, args, false, 'getTrades', handler));
 
     } else if(this.exchange === 'kraken') {
 
@@ -150,7 +150,7 @@ api.prototype.getTrades = function(cb) {
 
       };
 
-      this.kraken.api('Trades', {"pair": pair}, this.errorHandler(this.getTrades, args, false, handler));
+      this.kraken.api('Trades', {"pair": pair}, this.errorHandler(this.getTrades, args, false, 'getTrades', handler));
 
     }
 
@@ -181,7 +181,7 @@ api.prototype.getBalance = function(cb) {
 
       };
 
-      this.bitstamp.balance(this.errorHandler(this.getBalance, args, true, handler));
+      this.bitstamp.balance(this.errorHandler(this.getBalance, args, true, 'getBalance', handler));
 
     } else if(this.exchange === 'kraken') {
 
@@ -203,7 +203,7 @@ api.prototype.getBalance = function(cb) {
           currencyValue = 0;
         }
 
-        this.kraken.api('TradeVolume', {"pair": pair}, this.errorHandler(this.getBalance, args, true, function(err, data) {
+        this.kraken.api('TradeVolume', {"pair": pair}, this.errorHandler(this.getBalance, args, true, 'getBalance', function(err, data) {
 
           var fee = parseFloat(_.find(data.result.fees, function(value, key) {
             return key === pair;
@@ -215,7 +215,7 @@ api.prototype.getBalance = function(cb) {
 
       }.bind(this);
 
-      this.kraken.api('Balance', {}, this.errorHandler(this.getBalance, args, true, handler));
+      this.kraken.api('Balance', {}, this.errorHandler(this.getBalance, args, true, 'getBalance', handler));
 
     }
 
@@ -251,7 +251,7 @@ api.prototype.getOrderBook = function(cb) {
 
       };
 
-      this.bitstamp.order_book(1, this.errorHandler(this.getOrderBook, args, true, handler));
+      this.bitstamp.order_book(1, this.errorHandler(this.getOrderBook, args, true, 'getOrderBook', handler));
 
     } else if(this.exchange === 'kraken') {
 
@@ -275,7 +275,7 @@ api.prototype.getOrderBook = function(cb) {
 
       };
 
-      this.kraken.api('Depth', {"pair": pair}, this.errorHandler(this.getOrderBook, args, true, handler));
+      this.kraken.api('Depth', {"pair": pair}, this.errorHandler(this.getOrderBook, args, true, 'getOrderBook', handler));
 
     }
 
@@ -305,11 +305,11 @@ api.prototype.placeOrder = function(type, amount, price, cb) {
 
       if(type === 'buy') {
 
-        this.bitstamp.buy(amount, price, this.errorHandler(this.placeOrder, args, true, handler));
+        this.bitstamp.buy(amount, price, this.errorHandler(this.placeOrder, args, true, 'placeOrder', handler));
 
       } else if (type === 'sell') {
 
-        this.bitstamp.sell(amount, price, this.errorHandler(this.placeOrder, args, true, handler));
+        this.bitstamp.sell(amount, price, this.errorHandler(this.placeOrder, args, true, 'placeOrder', handler));
 
       } else {
 
@@ -326,11 +326,11 @@ api.prototype.placeOrder = function(type, amount, price, cb) {
 
       if(type === 'buy') {
 
-        this.kraken.api('AddOrder', {"pair": pair, "type": 'buy', "ordertype": 'limit', "price": price, "volume": amount}, this.errorHandler(this.placeOrder, args, true, handler));
+        this.kraken.api('AddOrder', {"pair": pair, "type": 'buy', "ordertype": 'limit', "price": price, "volume": amount}, this.errorHandler(this.placeOrder, args, true, 'placeOrder', handler));
 
       } else if (type === 'sell') {
 
-        this.kraken.api('AddOrder', {"pair": pair, "type": 'sell', "ordertype": 'limit', "price": price, "volume": amount}, this.errorHandler(this.placeOrder, args, true, handler));
+        this.kraken.api('AddOrder', {"pair": pair, "type": 'sell', "ordertype": 'limit', "price": price, "volume": amount}, this.errorHandler(this.placeOrder, args, true, 'placeOrder', handler));
 
       } else {
 
@@ -376,7 +376,7 @@ api.prototype.orderFilled = function(order, cb) {
 
       };
 
-      this.bitstamp.open_orders(this.errorHandler(this.orderFilled, args, false, handler));
+      this.bitstamp.open_orders(this.errorHandler(this.orderFilled, args, false, 'orderFilled', handler));
 
     } else if(this.exchange === 'kraken') {
 
@@ -400,7 +400,7 @@ api.prototype.orderFilled = function(order, cb) {
 
       };
 
-      this.kraken.api('OpenOrders', {}, this.errorHandler(this.orderFilled, args, false, handler));
+      this.kraken.api('OpenOrders', {}, this.errorHandler(this.orderFilled, args, false, 'orderFilled', handler));
 
     }
 
@@ -430,7 +430,7 @@ api.prototype.cancelOrder = function(order, cb) {
 
       };
 
-      this.bitstamp.cancel_order(order,this.errorHandler(this.cancelOrder, args, true, handler));
+      this.bitstamp.cancel_order(order,this.errorHandler(this.cancelOrder, args, true, 'cancelOrder', handler));
 
     } else if(this.exchange === 'kraken') {
 
@@ -448,7 +448,7 @@ api.prototype.cancelOrder = function(order, cb) {
 
           };
 
-          this.kraken.api('CancelOrder', {"txid": order}, this.errorHandler(this.cancelOrder, args, true, handler));
+          this.kraken.api('CancelOrder', {"txid": order}, this.errorHandler(this.cancelOrder, args, true, 'cancelOrder', handler));
 
         } else {
 
