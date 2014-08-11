@@ -116,15 +116,23 @@ api.prototype.getTrades = function(cb) {
 
       handler = function(err, response) {
 
-        var trades = _.map(response, function(t) {
+        if(!err) {
 
-          return {date: parseInt(t.date), price: parseFloat(t.price), amount: parseFloat(t.amount)};
+          var trades = _.map(response, function(t) {
 
-        });
+            return {date: parseInt(t.date), price: parseFloat(t.price), amount: parseFloat(t.amount)};
 
-        var result = _.sortBy(trades, function(trade){ return trade.date; });
+          });
 
-        cb(null, result);
+          var result = _.sortBy(trades, function(trade){ return trade.date; });
+
+          cb(null, result);
+
+        } else {
+
+          cb(err, null);
+
+        }
 
       };
 
@@ -134,19 +142,27 @@ api.prototype.getTrades = function(cb) {
 
       handler = function(err, data) {
 
-        var values = _.find(data.result, function(value, key) {
+        if(!err) {
 
-          return key === pair;
+          var values = _.find(data.result, function(value, key) {
 
-        });
+            return key === pair;
 
-        var trades = _.map(values, function(t) {
+          });
 
-          return {date: parseInt(t[2]), price: parseFloat(t[0]), amount: parseFloat(t[1])};
+          var trades = _.map(values, function(t) {
 
-        });
+            return {date: parseInt(t[2]), price: parseFloat(t[0]), amount: parseFloat(t[1])};
 
-        cb(null, trades);
+          });
+
+          cb(null, trades);
+
+        } else {
+
+          cb(err, null);
+
+        }
 
       };
 
@@ -358,19 +374,27 @@ api.prototype.orderFilled = function(order, cb) {
 
       handler = function(err, result) {
 
-        var open = _.find(result, function(o) {
+        if(!err) {
 
-          return o.id === order;
+          var open = _.find(result, function(o) {
 
-        }, this);
+            return o.id === order;
 
-        if(open) {
+          }, this);
 
-          cb(null, false);
+          if(open) {
+
+            cb(null, false);
+
+          } else {
+
+            cb(null, true);
+
+          }
 
         } else {
 
-          cb(null, true);
+          cb(err, null);
 
         }
 
@@ -382,19 +406,27 @@ api.prototype.orderFilled = function(order, cb) {
 
       handler = function(err, data) {
 
-        var open = _.find(data.result.open, function(value, key) {
+        if(!err) {
 
-          return key === order;
+          var open = _.find(data.result.open, function(value, key) {
 
-        });
+            return key === order;
 
-        if(open) {
+          });
 
-          cb(null, false);
+          if(open) {
+
+            cb(null, false);
+
+          } else {
+
+            cb(null, true);
+
+          }
 
         } else {
 
-          cb(null, true);
+          cb(err, null);
 
         }
 
