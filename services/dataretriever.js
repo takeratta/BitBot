@@ -31,10 +31,10 @@ downloader.prototype.processTrades = function(err, trades) {
     this.noTradesCount += 1;
 
     if(this.noTradesCount >= 30) {
-      logger.error('Haven\'t received data from the API for 30 consecutive attempts, stopping qpplication');
+      logger.error('Haven\'t received data from the API for 30 consecutive attempts, stopping application');
       return process.exit();
     }
-    
+
   }
 
 };
