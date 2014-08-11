@@ -6,6 +6,7 @@ var api = require('./api.js');
 var downloader = function(refreshInterval){
 
   this.refreshInterval = refreshInterval;
+  this.noTradesCount = 0;
 
   _.bindAll(this, 'start', 'stop', 'processTrades');
 
@@ -20,6 +21,17 @@ Util.inherits(downloader, EventEmitter);
 downloader.prototype.processTrades = function(err, trades) {
 
   if(!err) {
+
+    if(trades.length === 0) {
+      this.noTradesCount += 1;
+    } else {
+      this.noTradesCount = 0;
+    }
+
+    if(this.noTradesCount >= 30) {
+      logger.error('Haven\'t received data from the API for 30 consecutive attempts, stopping qpplication');
+      return process.exit();
+    }
 
     this.emit('update', trades);
 
