@@ -22,19 +22,19 @@ downloader.prototype.processTrades = function(err, trades) {
 
   if(!err) {
 
-    if(trades.length === 0) {
-      this.noTradesCount += 1;
-    } else {
-      this.noTradesCount = 0;
-    }
+    this.noTradesCount = 0;
+
+    this.emit('update', trades);
+
+  } else {
+
+    this.noTradesCount += 1;
 
     if(this.noTradesCount >= 30) {
       logger.error('Haven\'t received data from the API for 30 consecutive attempts, stopping qpplication');
       return process.exit();
     }
-
-    this.emit('update', trades);
-
+    
   }
 
 };
