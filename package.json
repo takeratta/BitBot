@@ -1,6 +1,6 @@
 {
   "name": "BitBot",
-  "version": "0.7.4",
+  "version": "0.7.5",
   "description": "Crypto-Currency Trading Bot",
   "main": "app.js",
   "dependencies": {
@@ -9,7 +9,7 @@
     "bitstamp": "0.1.5",
     "mime": "1.2.11",
     "moment": "2.4.0",
-    "mongojs": "0.13.0",
+    "mongojs": "0.13.1",
     "pushover-notifications": "0.1.5",
     "underscore": "1.5.2",
     "ws": "0.4.31",

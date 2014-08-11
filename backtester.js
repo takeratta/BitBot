@@ -59,7 +59,7 @@ var endDate;
 
 //------------------------------AnnounceStart
 console.log('------------------------------------------');
-console.log('Starting BitBot Back-Tester v0.7.4');
+console.log('Starting BitBot Back-Tester v0.7.5');
 console.log('Working Dir = ' + process.cwd());
 console.log('------------------------------------------');
 //------------------------------AnnounceStart
@@ -201,7 +201,7 @@ processor.on('initialized', function(){
         profit = Number(BigNumber(totalBalanceInUSD).minus(BigNumber(initialBalance)).round(2));
         profitPercentage = Number(BigNumber(profit).dividedBy(BigNumber(initialBalance)).times(BigNumber(100)).round(2));
         totalFeeCostsPercentage = Number(BigNumber(totalFeeCosts).dividedBy(BigNumber(initialBalance)).times(BigNumber(100)).round(2));
-        bhProfit = Number(BigNumber(_.last(loopArray).close).minus(_.first(loopArray).open).round(2));
+        bhProfit = Number(BigNumber(_.last(loopArray).close).minus(_.first(loopArray).open).times(BigNumber(intialBalanceBTC)).round(2));
         bhProfitPercentage = Number(BigNumber(bhProfit).dividedBy(BigNumber(initialBalance)).times(BigNumber(100)).round(2));
 
         startDate = moment(new Date(_.first(loopArray).period*1000)).format('DD-MM-YYYY HH:mm:ss');

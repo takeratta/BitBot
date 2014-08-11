@@ -3,6 +3,7 @@ var logger = require('./loggingservice.js');
 var BigNumber = require('bignumber.js');
 var tools = require('./tools.js');
 var db = require('mongojs');
+var async = require('async');
 
 //------------------------------Config
 var config = require('../config.js');
@@ -367,7 +368,7 @@ storage.prototype.materialise = function(callback) {
 
 	csCollection.find({volume: {$gt:0}}).sort({period:-1}).limit(1,function(err, sticks) {
 
-		var filterPeriod = 0
+		var filterPeriod = 0;
 
 		if(!err && sticks.length > 0) {
 
@@ -383,31 +384,31 @@ storage.prototype.materialise = function(callback) {
 
 		if(materialiseCs.length > 0) {
 
-			csCollection.remove({ period: { $gte: filterPeriod } }, function(err, resp) {
+			async.eachSeries(materialiseCs, function(cs, cb) {
+
+				csCollection.update({period: cs.period}, cs, { upsert: true }, function(err, doc) {
+
+					if(err) {
+
+						cb(err);
+
+					} else {
+
+						cb();
+
+					}
+
+				});
+
+			}, function(err) {
 
 				if(err) {
-
-					csDatastore.close();
 
 					callback(err);
 
 				} else {
 
-					csCollection.insert(materialiseCs, function(err) {
-
-						csDatastore.close();
-
-						if(err) {
-
-							callback(err);
-
-						} else {
-
-							callback(null);
-
-						}
-
-					});
+					callback(null);
 
 				}
 
