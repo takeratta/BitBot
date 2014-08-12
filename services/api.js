@@ -66,7 +66,15 @@ api.prototype.errorHandler = function(method, receivedArgs, retryAllowed, caller
 
     if(err) {
 
-      if(this.exchange === 'kraken' && err[0] === 'EQuery:Unknown asset pair') {
+      var parsedError;
+
+      if(JSON.stringify(err) === '{}' && err.message) {
+        parsedError = err.message;
+      } else {
+        parsedError = JSON.stringify(err);
+      }
+
+      if(this.exchange === 'kraken' && parsedError === '["EQuery:Unknown asset pair"]') {
 
         logger.error('Kraken returned Unknown asset pair error, exiting!');
         return process.exit();
@@ -74,14 +82,14 @@ api.prototype.errorHandler = function(method, receivedArgs, retryAllowed, caller
       } else if(retryAllowed) {
 
         logger.error(caller + ' Couldn\'t connect to the API, retrying in 15 seconds!');
-        logger.error(JSON.stringify(err).substring(0,99));
+        logger.error(parsedError.substring(0,99));
         return this.retry(method, args);
 
       } else {
 
         logger.error(caller + ' Couldn\'t connect to the API.');
-        cb(err, null);
-        return logger.error(JSON.stringify(err).substring(0,99));
+        cb(parsedError, null);
+        return logger.error(parsedError.substring(0,99));
 
       }
 

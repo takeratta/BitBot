@@ -28,7 +28,7 @@ var pricemon = new pricemonitor(config.stoplossSettings.percentageBought, config
 
 //------------------------------AnnounceStart
 console.log('------------------------------------------');
-console.log('Starting BitBot v0.7.5');
+console.log('Starting BitBot v0.7.6');
 console.log('Real Trading Enabled = ' + config.tradingEnabled);
 console.log('Working Dir = ' + process.cwd());
 console.log('------------------------------------------');
