@@ -402,6 +402,8 @@ storage.prototype.materialise = function(callback) {
 
 			}, function(err) {
 
+				csDatastore.close();
+
 				if(err) {
 
 					callback(err);
