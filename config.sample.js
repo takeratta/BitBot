@@ -33,6 +33,8 @@ config.apiSettings = {
 config.mongoConnectionString = 'localhost/bitbot';
 // The connection string for your MongoDB Installation
 // Example: config.mongoConnectionString = 'username:password@example.com/mydb';
+config.resetInitialBalances = false;
+// Set this to true if you want to reset the initialBalance stored by the bot
 //------------------------------dbSettings
 
 //------------------------------downloaderSettings

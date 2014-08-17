@@ -1,21 +1,13 @@
 var _ = require('underscore');
-var logger = require('./loggingservice.js');
 var BigNumber = require('bignumber.js');
 var tools = require('./tools.js');
-var db = require('mongojs');
-var async = require('async');
-
-//------------------------------Config
-var config = require('../config.js');
-//------------------------------Config
+var db = require('./db.js');
 
 var storage = function() {
 
-	this.dbCollectionName = config.exchangeSettings.exchange + config.exchangeSettings.currencyPair.pair;
-
 	this.candleSticksCollection = [];
 
-	_.bindAll(this, 'selectCollection', 'set', 'push', 'removeOldCandles', 'flush', 'getAllCandlesSince', 'getLastNCandles', 'getLastPeriod', 'getLastNonEmptyPeriod', 'getLastClose', 'getLastNonEmptyClose', 'getCandle', 'length', 'getAverageCandleStickSize', 'generateWebServerArray', 'getFinishedAggregatedCandleSticks', 'getLastCompleteAggregatedCandleStick', 'getAggregatedCandleSticks', 'materialise', 'removeOldDBCandles', 'getDBCandles');
+	_.bindAll(this, 'selectCollection', 'set', 'push', 'removeOldCandles', 'flush', 'getAllCandlesSince', 'getLastNCandles', 'getLastPeriod', 'getLastNonEmptyPeriod', 'getLastClose', 'getLastNonEmptyClose', 'getCandle', 'length', 'getAverageCandleStickSize', 'generateWebServerArray', 'getFinishedAggregatedCandleSticks', 'getLastCompleteAggregatedCandleStick', 'getAggregatedCandleSticks', 'materialise', 'getDBCandles');
 
 };
 
@@ -104,7 +96,7 @@ storage.prototype.removeOldCandles = function() {
 		});
 
 		if(candleStickSize === 1) {
-			this.removeOldDBCandles(oldPeriod);
+			db.removeOldDBCandles(oldPeriod);
 		}
 
 	}, this);
@@ -203,7 +195,6 @@ storage.prototype.getLastClose = function(candleStickSize) {
 	}
 
 };
-
 
 storage.prototype.getLastNonEmptyClose = function(candleStickSize) {
 
@@ -360,118 +351,21 @@ storage.prototype.getAggregatedCandleSticks = function(candleStickSize) {
 };
 
 storage.prototype.materialise = function(callback) {
-
 	var candleStickArray = this.selectCollection(1);
-
-	var csDatastore = db(config.mongoConnectionString);
-	var csCollection = csDatastore.collection(this.dbCollectionName);
-
-	csCollection.find({volume: {$gt:0}}).sort({period:-1}).limit(1,function(err, sticks) {
-
-		var filterPeriod = 0;
-
-		if(!err && sticks.length > 0) {
-
-			filterPeriod = sticks[0].period;
-
-		}
-
-		materialiseCs = _.filter(candleStickArray.candleSticks, function(cs){
-
-			return cs.period >= filterPeriod;
-
-		});
-
-		if(materialiseCs.length > 0) {
-
-			async.eachSeries(materialiseCs, function(cs, cb) {
-
-				csCollection.update({period: cs.period}, cs, { upsert: true }, function(err, doc) {
-
-					if(err) {
-
-						cb(err);
-
-					} else {
-
-						cb();
-
-					}
-
-				});
-
-			}, function(err) {
-
-				csDatastore.close();
-
-				if(err) {
-
-					callback(err);
-
-				} else {
-
-					callback(null);
-
-				}
-
-			});
-
-		} else {
-
-			callback(null);
-
-		}
-
-	});
-
-};
-
-storage.prototype.removeOldDBCandles = function(filterPeriod) {
-
-	var csDatastore = db(config.mongoConnectionString);
-	var csCollection = csDatastore.collection(this.dbCollectionName);
-
-	csCollection.remove({ period: { $lte: filterPeriod } }, function(err, resp) {
-
-		csDatastore.close();
-
-	});
-
+	db.materialise(candleStickArray.candleSticks, callback);
 };
 
 storage.prototype.getDBCandles = function(callback) {
+	db.getDBCandles(function(err, storageCandleSticks) {
 
-	var csDatastore = db(config.mongoConnectionString);
-	var csCollection = csDatastore.collection(this.dbCollectionName);
-
-	csCollection.ensureIndex({period: 1});
-
-	csCollection.find({}).sort({period:1}, function(err, candleSticks) {
-
-		csDatastore.close();
-
-		if(err) {
-
-			callback(err);
-
-		} else if(candleSticks.length > 0 ){
-
-			var storageCandleSticks = _.map(candleSticks, function(candleStick){
-				return {'period':candleStick.period, 'open':candleStick.open, 'high':candleStick.high, 'low':candleStick.low, 'close':candleStick.close, 'volume':candleStick.volume, 'vwap':candleStick.vwap};
-			});
-
+		if(!err && storageCandleSticks) {
 			this.set(storageCandleSticks);
-
 			callback(null);
-
 		} else {
-
-			callback(null);
-
+			callback(err);
 		}
 
 	}.bind(this));
-
 };
 
 var candlestorage = new storage();

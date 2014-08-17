@@ -136,3 +136,8 @@ Remember the backtester simulates your trading strategy on the data you collecte
 
 The provided trading algorithms are well known and documented on the internet (MADC, PPO). I do not guarantee you will make any profit when using this bot...
 For better results, consider writing your own algorithm and share it with the community in a pull request :-).
+
+# Donations
+
+If you enjoyed using BitBot or would like to help me continue development of this bot, consider buying me a beer:  
+(BTC) 1BitBotSYYMAsn6c1AsrxWphWAGkNE6hmQ
