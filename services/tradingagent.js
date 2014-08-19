@@ -44,8 +44,8 @@ tradingagent.prototype.order = function(orderType) {
 
 	async.series(
 		{
-		balance: api.getBalance,
-		orderBook: api.getOrderBook
+			balance: function(cb) {api.getBalance(true, cb);},
+			orderBook: function(cb) {api.getOrderBook(true, cb);}
 		},
 		process.bind(this)
 	);

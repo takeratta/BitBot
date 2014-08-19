@@ -1,6 +1,6 @@
 {
   "name": "BitBot",
-  "version": "0.7.8",
+  "version": "0.7.9",
   "description": "Crypto-Currency Trading Bot",
   "main": "app.js",
   "dependencies": {
@@ -27,6 +27,6 @@
     "Trading",
     "Bot"
   ],
-  "author": "5an1ty",
+  "author": "Ruben Callewaert",
   "license": "MIT"
 }
