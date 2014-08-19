@@ -104,8 +104,8 @@ profitreporter.prototype.start = function(resetInitialBalances) {
 
         async.series(
           {
-            balance: api.getBalance,
-            orderBook: api.getOrderBook
+            balance: function(cb) {api.getBalance(true, cb);},
+            orderBook: function(cb) {api.api.getOrderBook(true, cb);}
           },
           this.intialize
         );
@@ -124,8 +124,8 @@ profitreporter.prototype.updateBalance = function(includeReport) {
 
   async.series(
     {
-      balance: api.getBalance,
-      orderBook: api.getOrderBook
+      balance: function(cb) {api.getBalance(true, cb);},
+      orderBook: function(cb) {api.api.getOrderBook(true, cb);}
     },
     this.processBalance
   );

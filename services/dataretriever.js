@@ -43,10 +43,10 @@ downloader.prototype.start = function() {
 
   logger.log('Downloader started!');
 
-  api.getTrades(this.processTrades);
+  api.getTrades(false, this.processTrades);
 
   this.downloadInterval = setInterval(function(){
-    api.getTrades(this.processTrades);
+    api.getTrades(false, this.processTrades);
   }.bind(this),1000 * this.refreshInterval);
 
 };

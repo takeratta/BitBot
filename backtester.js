@@ -59,7 +59,7 @@ var endDate;
 
 //------------------------------AnnounceStart
 console.log('------------------------------------------');
-console.log('Starting BitBot Back-Tester v0.7.7');
+console.log('Starting BitBot Back-Tester v0.7.8');
 console.log('Working Dir = ' + process.cwd());
 console.log('------------------------------------------');
 //------------------------------AnnounceStart
@@ -154,7 +154,7 @@ var createOrder = function(type, stopLoss) {
 
 processor.on('initialized', function(){
 
-    api.getBalance(function(err, result){
+    api.getBalance(true, function(err, result){
 
         transactionFee = result.fee;
 

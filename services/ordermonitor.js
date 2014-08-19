@@ -5,7 +5,7 @@ var api = require('./api.js');
 
 var ordermonitor = function() {
 
-  _.bindAll(this, 'checkCancellation', 'processCancellation', 'processSimulation', 'add', 'resolvePreviousOrder');
+  _.bindAll(this, 'checkFilled', 'processCancellation', 'processSimulation', 'add', 'resolvePreviousOrder');
 
   this.checkOrder = {};
 
@@ -17,7 +17,7 @@ var EventEmitter = require('events').EventEmitter;
 Util.inherits(ordermonitor, EventEmitter);
 //---EventEmitter Setup
 
-ordermonitor.prototype.checkCancellation = function(checkOrder, filled) {
+ordermonitor.prototype.checkFilled = function(checkOrder, filled) {
 
   if(checkOrder.status !== 'filled') {
 
@@ -86,9 +86,9 @@ ordermonitor.prototype.add = function(orderDetails, cancelTime) {
 
     this.checkOrder.interval = setInterval(function() {
 
-      api.orderFilled(this.checkOrder.id, function(err, response){
+      api.orderFilled(this.checkOrder.id, false, function(err, response){
         if(!err) {
-          this.checkCancellation(this.checkOrder, response);
+          this.checkFilled(this.checkOrder, response);
         }
       }.bind(this));
 
@@ -100,7 +100,9 @@ ordermonitor.prototype.add = function(orderDetails, cancelTime) {
 
       if(this.checkOrder.status === 'open') {
 
-        api.cancelOrder(this.checkOrder.id, function(err, response) {
+        logger.log('Cancelling order: ' + this.checkOrder.id);
+
+        api.cancelOrder(this.checkOrder.id, true, function(err, response) {
           this.processCancellation(this.checkOrder, response);
         }.bind(this));
 
@@ -119,7 +121,7 @@ ordermonitor.prototype.resolvePreviousOrder = function() {
     clearInterval(this.checkOrder.interval);
     clearTimeout(this.checkOrder.timeout);
 
-    this.checkOrder.status = 'cancelled';
+    this.checkOrder.status = 'resolved';
 
   }
 

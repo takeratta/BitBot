@@ -119,7 +119,7 @@ tradingagent.prototype.placeRealOrder = function() {
 
 	} else {
 
-		api.placeOrder(this.orderDetails.orderType, this.orderDetails.amount, this.orderDetails.price, this.processOrder);
+		api.placeOrder(this.orderDetails.orderType, this.orderDetails.amount, this.orderDetails.price, true, this.processOrder);
 
 	}
 

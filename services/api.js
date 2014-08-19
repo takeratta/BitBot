@@ -110,7 +110,7 @@ api.prototype.errorHandler = function(method, receivedArgs, retryAllowed, caller
 
 };
 
-api.prototype.getTrades = function(cb) {
+api.prototype.getTrades = function(retry, cb) {
 
   var args = arguments;
 
@@ -144,7 +144,7 @@ api.prototype.getTrades = function(cb) {
 
       };
 
-      this.bitstamp.transactions({time: 'hour'}, this.errorHandler(this.getTrades, args, false, 'getTrades', handler));
+      this.bitstamp.transactions({time: 'hour'}, this.errorHandler(this.getTrades, args, retry, 'getTrades', handler));
 
     } else if(this.exchange === 'kraken') {
 
@@ -174,7 +174,7 @@ api.prototype.getTrades = function(cb) {
 
       };
 
-      this.kraken.api('Trades', {"pair": pair}, this.errorHandler(this.getTrades, args, false, 'getTrades', handler));
+      this.kraken.api('Trades', {"pair": pair}, this.errorHandler(this.getTrades, args, retry, 'getTrades', handler));
 
     }
 
@@ -184,7 +184,7 @@ api.prototype.getTrades = function(cb) {
 
 };
 
-api.prototype.getBalance = function(cb) {
+api.prototype.getBalance = function(retry, cb) {
 
   var args = arguments;
 
@@ -201,45 +201,69 @@ api.prototype.getBalance = function(cb) {
 
       handler = function(err, result) {
 
-        cb(null, {currencyAvailable:result.usd_available, assetAvailable:result.btc_available, fee:result.fee});
+        if(!err) {
+
+          cb(null, {currencyAvailable:result.usd_available, assetAvailable:result.btc_available, fee:result.fee});
+
+        } else {
+
+          cb(err, null);
+
+        }
 
       };
 
-      this.bitstamp.balance(this.errorHandler(this.getBalance, args, true, 'getBalance', handler));
+      this.bitstamp.balance(this.errorHandler(this.getBalance, args, retry, 'getBalance', handler));
 
     } else if(this.exchange === 'kraken') {
 
       handler = function(err, data) {
 
-        var assetValue = _.find(data.result, function(value, key) {
-          return key === asset;
-        });
+        if(!err) {
 
-        var currencyValue = _.find(data.result, function(value, key) {
-          return key === currency;
-        });
+          var assetValue = _.find(data.result, function(value, key) {
+            return key === asset;
+          });
 
-        if(!assetValue) {
-          assetValue = 0;
+          var currencyValue = _.find(data.result, function(value, key) {
+            return key === currency;
+          });
+
+          if(!assetValue) {
+            assetValue = 0;
+          }
+
+          if(!currencyValue) {
+            currencyValue = 0;
+          }
+
+          this.kraken.api('TradeVolume', {"pair": pair}, this.errorHandler(this.getBalance, args, retry, 'getBalance', function(err, data) {
+
+            if(!err) {
+
+              var fee = parseFloat(_.find(data.result.fees, function(value, key) {
+                return key === pair;
+              }).fee);
+
+              cb(null, {currencyAvailable:currencyValue, assetAvailable:assetValue, fee:fee});
+
+            } else {
+
+              cb(err, null);
+
+            }
+
+          }));
+
+        } else {
+
+          cb(err, null);
+
         }
-
-        if(!currencyValue) {
-          currencyValue = 0;
-        }
-
-        this.kraken.api('TradeVolume', {"pair": pair}, this.errorHandler(this.getBalance, args, true, 'getBalance', function(err, data) {
-
-          var fee = parseFloat(_.find(data.result.fees, function(value, key) {
-            return key === pair;
-          }).fee);
-
-          cb(null, {currencyAvailable:currencyValue, assetAvailable:assetValue, fee:fee});
-
-        }));
 
       }.bind(this);
 
-      this.kraken.api('Balance', {}, this.errorHandler(this.getBalance, args, true, 'getBalance', handler));
+      this.kraken.api('Balance', {}, this.errorHandler(this.getBalance, args, retry, 'getBalance', handler));
 
     }
 
@@ -249,7 +273,7 @@ api.prototype.getBalance = function(cb) {
 
 };
 
-api.prototype.getOrderBook = function(cb) {
+api.prototype.getOrderBook = function(retry, cb) {
 
   var args = arguments;
 
@@ -263,43 +287,59 @@ api.prototype.getOrderBook = function(cb) {
 
       handler = function(err, result) {
 
-        var bids = _.map(result.bids, function(bid) {
-          return {assetAmount: bid[1], currencyPrice: bid[0]};
-        });
+        if(!err) {
 
-        var asks = _.map(result.asks, function(ask) {
-          return {assetAmount: ask[1], currencyPrice: ask[0]};
-        });
+          var bids = _.map(result.bids, function(bid) {
+            return {assetAmount: bid[1], currencyPrice: bid[0]};
+          });
 
-        cb(null, {bids: bids, asks: asks});
+          var asks = _.map(result.asks, function(ask) {
+            return {assetAmount: ask[1], currencyPrice: ask[0]};
+          });
+
+          cb(null, {bids: bids, asks: asks});
+
+        } else {
+
+          cb(err, null);
+
+        }
 
       };
 
-      this.bitstamp.order_book(1, this.errorHandler(this.getOrderBook, args, true, 'getOrderBook', handler));
+      this.bitstamp.order_book(1, this.errorHandler(this.getOrderBook, args, retry, 'getOrderBook', handler));
 
     } else if(this.exchange === 'kraken') {
 
       handler = function(err, data) {
 
-        var orderbook = _.find(data.result, function(value, key) {
+        if(!err) {
 
-          return key === pair;
+          var orderbook = _.find(data.result, function(value, key) {
 
-        });
+            return key === pair;
 
-        var bids = _.map(orderbook.bids, function(bid) {
-          return {assetAmount: bid[1], currencyPrice: bid[0]};
-        });
+          });
 
-        var asks = _.map(orderbook.asks, function(ask) {
-          return {assetAmount: ask[1], currencyPrice: ask[0]};
-        });
+          var bids = _.map(orderbook.bids, function(bid) {
+            return {assetAmount: bid[1], currencyPrice: bid[0]};
+          });
 
-        cb(null, {bids: bids, asks: asks});
+          var asks = _.map(orderbook.asks, function(ask) {
+            return {assetAmount: ask[1], currencyPrice: ask[0]};
+          });
+
+          cb(null, {bids: bids, asks: asks});
+
+        } else {
+
+          cb(err, null);
+
+        }
 
       };
 
-      this.kraken.api('Depth', {"pair": pair}, this.errorHandler(this.getOrderBook, args, true, 'getOrderBook', handler));
+      this.kraken.api('Depth', {"pair": pair}, this.errorHandler(this.getOrderBook, args, retry, 'getOrderBook', handler));
 
     }
 
@@ -309,7 +349,7 @@ api.prototype.getOrderBook = function(cb) {
 
 };
 
-api.prototype.placeOrder = function(type, amount, price, cb) {
+api.prototype.placeOrder = function(type, amount, price, retry, cb) {
 
   var args = arguments;
 
@@ -323,17 +363,25 @@ api.prototype.placeOrder = function(type, amount, price, cb) {
 
       handler = function(err, result) {
 
-        cb(null, {txid: result.id});
+        if(!err) {
+
+          cb(null, {txid: result.id});
+
+        } else {
+
+          cb(err, null);
+
+        }
 
       };
 
       if(type === 'buy') {
 
-        this.bitstamp.buy(amount, price, this.errorHandler(this.placeOrder, args, true, 'placeOrder', handler));
+        this.bitstamp.buy(amount, price, this.errorHandler(this.placeOrder, args, retry, 'placeOrder', handler));
 
       } else if (type === 'sell') {
 
-        this.bitstamp.sell(amount, price, this.errorHandler(this.placeOrder, args, true, 'placeOrder', handler));
+        this.bitstamp.sell(amount, price, this.errorHandler(this.placeOrder, args, retry, 'placeOrder', handler));
 
       } else {
 
@@ -344,17 +392,25 @@ api.prototype.placeOrder = function(type, amount, price, cb) {
 
       handler = function(err, data) {
 
-        cb(null, {txid: data.result.txid[0]});
+        if(!err) {
+
+          cb(null, {txid: data.result.txid[0]});
+
+        } else {
+
+          cb(err, null);
+
+        }
 
       };
 
       if(type === 'buy') {
 
-        this.kraken.api('AddOrder', {"pair": pair, "type": 'buy', "ordertype": 'limit', "price": price, "volume": amount}, this.errorHandler(this.placeOrder, args, true, 'placeOrder', handler));
+        this.kraken.api('AddOrder', {"pair": pair, "type": 'buy', "ordertype": 'limit', "price": price, "volume": amount}, this.errorHandler(this.placeOrder, args, retry, 'placeOrder', handler));
 
       } else if (type === 'sell') {
 
-        this.kraken.api('AddOrder', {"pair": pair, "type": 'sell', "ordertype": 'limit', "price": price, "volume": amount}, this.errorHandler(this.placeOrder, args, true, 'placeOrder', handler));
+        this.kraken.api('AddOrder', {"pair": pair, "type": 'sell', "ordertype": 'limit', "price": price, "volume": amount}, this.errorHandler(this.placeOrder, args, retry, 'placeOrder', handler));
 
       } else {
 
@@ -370,7 +426,7 @@ api.prototype.placeOrder = function(type, amount, price, cb) {
 
 };
 
-api.prototype.orderFilled = function(order, cb) {
+api.prototype.orderFilled = function(order, retry, cb) {
 
   var args = arguments;
 
@@ -408,7 +464,7 @@ api.prototype.orderFilled = function(order, cb) {
 
       };
 
-      this.bitstamp.open_orders(this.errorHandler(this.orderFilled, args, false, 'orderFilled', handler));
+      this.bitstamp.open_orders(this.errorHandler(this.orderFilled, args, retry, 'orderFilled', handler));
 
     } else if(this.exchange === 'kraken') {
 
@@ -440,7 +496,7 @@ api.prototype.orderFilled = function(order, cb) {
 
       };
 
-      this.kraken.api('OpenOrders', {}, this.errorHandler(this.orderFilled, args, false, 'orderFilled', handler));
+      this.kraken.api('OpenOrders', {}, this.errorHandler(this.orderFilled, args, retry, 'orderFilled', handler));
 
     }
 
@@ -450,7 +506,7 @@ api.prototype.orderFilled = function(order, cb) {
 
 };
 
-api.prototype.cancelOrder = function(order, cb) {
+api.prototype.cancelOrder = function(order, retry, cb) {
 
   var args = arguments;
 
@@ -462,33 +518,49 @@ api.prototype.cancelOrder = function(order, cb) {
 
       handler = function(err, result) {
 
-        if(!result.error) {
-          cb(null, true);
+        if(!err) {
+
+          if(!result.error) {
+            cb(null, true);
+          } else {
+            cb(null, false);
+          }
+
         } else {
-          cb(null, false);
+
+          cb(err, null);
+
         }
 
       };
 
-      this.bitstamp.cancel_order(order,this.errorHandler(this.cancelOrder, args, true, 'cancelOrder', handler));
+      this.bitstamp.cancel_order(order,this.errorHandler(this.cancelOrder, args, retry, 'cancelOrder', handler));
 
     } else if(this.exchange === 'kraken') {
 
-      this.orderFilled(order, function(err, filled) {
+      this.orderFilled(order, true, function(err, filled) {
 
         if(!filled) {
 
-          handler = function(err, result) {
+          handler = function(err, data) {
 
-            if(result.count > 0) {
-              cb(null, true);
+            if(!err) {
+
+              if(data.result.count > 0) {
+                cb(null, true);
+              } else {
+                cb(null, false);
+              }
+
             } else {
-              cb(null, false);
+
+              cb(err, null);
+
             }
 
           };
 
-          this.kraken.api('CancelOrder', {"txid": order}, this.errorHandler(this.cancelOrder, args, true, 'cancelOrder', handler));
+          this.kraken.api('CancelOrder', {"txid": order}, this.errorHandler(this.cancelOrder, args, retry, 'cancelOrder', handler));
 
         } else {
 
