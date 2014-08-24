@@ -1,20 +1,20 @@
 var _ = require('underscore');
 var async = require('async');
-var logger = require('./loggingservice.js');
-var storage = require('./candlestorage.js');
 var fs = require('fs');
 
-var advisor = function(indicatorSettings, candleStickSize, backTesting) {
+var advisor = function(indicatorSettings, candleStickSize, backTesting, storage, logger) {
 
 	this.candleStickSize = candleStickSize;
 	this.backTesting = backTesting;
+	this.storage = storage;
+	this.logger = logger;
 
 	if(fs.existsSync('./indicators/' + indicatorSettings.indicator + '.js')) {
 		var indicator = require('../indicators/' + indicatorSettings.indicator + '.js');
 		this.selectedIndicator = new indicator(indicatorSettings.options);
 	} else {
 		var err = new Error('Wrong indicator chosen. This indicator doesn\'t exist.');
-		logger.error(err.stack);
+		this.logger.error(err.stack);
 		process.exit();
 	}
 
@@ -30,11 +30,11 @@ Util.inherits(advisor, EventEmitter);
 
 advisor.prototype.start = function() {
 
-	var candleSticks = storage.getFinishedAggregatedCandleSticks(this.candleStickSize);
+	var candleSticks = this.storage.getFinishedAggregatedCandleSticks(this.candleStickSize);
 
 	for(var i = 0; i < candleSticks.length; i++) {
 
-		var advice = this.selectedIndicator.calculate(candleSticks[i]);
+		var result = this.selectedIndicator.calculate(candleSticks[i]);
 
 	}
 
@@ -42,19 +42,19 @@ advisor.prototype.start = function() {
 
 advisor.prototype.update = function(cs) {
 
-	var advice = this.selectedIndicator.calculate(cs);
+	var result = this.selectedIndicator.calculate(cs);
 
 	if(!this.backTesting) {
-		logger.log('Advice: ' + advice);
+		this.logger.log('Advice: ' + result.advice + ' (' + result.indicatorValue + ')');
 	} else {
-		logger.debug('Advice: ' + advice);
+		this.logger.debug('Advice: ' + result.advice + ' (' + result.indicatorValue + ')');
 	}
 
-	if(['buy', 'sell', 'hold'].indexOf(advice) >= 0) {
-		this.emit('advice', advice);
+	if(['buy', 'sell', 'hold'].indexOf(result.advice) >= 0) {
+		this.emit('advice', result.advice);
 	} else {
 		var err = new Error('Invalid advice from indicator, should be either: buy, sell or hold.');
-		logger.error(err.stack);
+		this.logger.error(err.stack);
 		process.exit();
 	}
 

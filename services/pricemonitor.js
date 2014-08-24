@@ -1,14 +1,13 @@
 var _ = require('underscore');
 var BigNumber = require('bignumber.js');
-var logger = require('./loggingservice.js');
-var api = require('./api.js');
-var storage = require('./candlestorage.js');
 
-var pricemonitor = function(slPercentageB, slPercentageS, candleStickSizeMinutes) {
+var monitor = function(slPercentageB, slPercentageS, candleStickSizeMinutes, storage, logger) {
 
   this.percentageBought = slPercentageB;
   this.percentageSold = slPercentageS;
   this.candleStickSizeMinutes = candleStickSizeMinutes;
+  this.storage = storage;
+  this.logger = logger;
 
   this.position = 'none';
 
@@ -19,24 +18,24 @@ var pricemonitor = function(slPercentageB, slPercentageS, candleStickSizeMinutes
 //---EventEmitter Setup
 var Util = require('util');
 var EventEmitter = require('events').EventEmitter;
-Util.inherits(pricemonitor, EventEmitter);
+Util.inherits(monitor, EventEmitter);
 //---EventEmitter Setup
 
-pricemonitor.prototype.check = function(price) {
+monitor.prototype.check = function(price) {
 
   if(this.position === 'bought') {
 
     if(price <= this.checkPriceBought) {
-      logger.log('Stop Loss triggered (Long Entry: ' + this.posPrice + ' Exit: ' + price + ')');
+      this.logger.log('Stop Loss triggered (Long Entry: ' + this.posPrice + ' Exit: ' + price + ')');
       this.position = 'none';
       this.posPrice = 0;
       this.emit('advice', 'sell');
     }
-    
+
   } else if(this.position === 'sold') {
 
     if(price >= this.checkPriceSold) {
-      logger.log('Stop Loss triggered (Short Entry: ' + this.posPrice + ' Exit: ' + price + ')');
+      this.logger.log('Stop Loss triggered (Short Entry: ' + this.posPrice + ' Exit: ' + price + ')');
       this.position = 'none';
       this.posPrice = 0;
       this.emit('advice', 'buy');
@@ -50,7 +49,7 @@ pricemonitor.prototype.check = function(price) {
 
 };
 
-pricemonitor.prototype.setPosition = function(pos, price) {
+monitor.prototype.setPosition = function(pos, price) {
 
   if(pos === 'bought') {
 
@@ -68,11 +67,11 @@ pricemonitor.prototype.setPosition = function(pos, price) {
 
 };
 
-pricemonitor.prototype.update = function(cs) {
+monitor.prototype.update = function(cs) {
 
   var diff = cs.close - cs.open;
   var size = Math.abs(Number(BigNumber(cs.close).minus(BigNumber(cs.open)).round(2)));
-  var averageSize = storage.getAverageCandleStickSize(10, this.candleStickSizeMinutes);
+  var averageSize = this.storage.getAverageCandleStickSize(10, this.candleStickSizeMinutes);
 
   var change = Number(BigNumber(size).dividedBy(2).round(2));
 
@@ -84,7 +83,7 @@ pricemonitor.prototype.update = function(cs) {
 
       newSl = Number(BigNumber(this.checkPriceBought).plus(change));
 
-      logger.log('Stop loss increased! Old: ' + this.checkPriceBought + ' New: ' + newSl);
+      this.logger.log('Stop loss increased! Old: ' + this.checkPriceBought + ' New: ' + newSl);
 
       this.checkPriceBought = newSl;
 
@@ -92,7 +91,7 @@ pricemonitor.prototype.update = function(cs) {
 
       newSl = Number(BigNumber(this.checkPriceSold).minus(change));
 
-      logger.log('Stop loss decreased! Old: ' + this.checkPriceSold + ' New: ' + newSl);
+      this.logger.log('Stop loss decreased! Old: ' + this.checkPriceSold + ' New: ' + newSl);
 
       this.checkPriceSold = newSl;
 
@@ -102,4 +101,4 @@ pricemonitor.prototype.update = function(cs) {
 
 };
 
-module.exports = pricemonitor;
+module.exports = monitor;

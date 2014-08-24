@@ -1,5 +1,9 @@
 var _ = require('underscore');
 
+var loggingservice = require('./services/loggingservice.js');
+var database = require('./services/db.js');
+var candlestorage = require('./services/candlestorage.js');
+var exchangeapiservice = require('./services/exchangeapi.js');
 var dataretriever = require('./services/dataretriever.js');
 var dataprocessor = require('./services/dataprocessor.js');
 var candleaggregator = require('./services/candleaggregator');
@@ -15,24 +19,20 @@ var config = require('./config.js');
 //------------------------------Config
 
 //------------------------------IntializeModules
-var retriever = new dataretriever(config.downloaderRefreshSeconds);
-var processor = new dataprocessor(config.candleStickSizeMinutes);
-var aggregator = new candleaggregator(config.candleStickSizeMinutes);
-var advisor = new tradingadvisor(config.indicatorSettings, config.candleStickSizeMinutes, false);
-var agent = new tradingagent(config.tradingEnabled, config.exchangeSettings);
-var pusher = new pushservice(config.pushOver);
-var monitor = new ordermonitor();
-var reporter = new profitreporter(config.exchangeSettings.currencyPair);
-var pricemon = new pricemonitor(config.stoplossSettings.percentageBought, config.stoplossSettings.percentageSold, config.candleStickSizeMinutes);
+var logger = new loggingservice(config.debug);
+var db = new database(config.exchangeSettings, config.mongoConnectionString, logger);
+var storage = new candlestorage(db, logger);
+var exchangeapi = new exchangeapiservice(config.exchangeSettings, config.apiSettings, logger);
+var retriever = new dataretriever(config.downloaderRefreshSeconds, exchangeapi, logger);
+var processor = new dataprocessor(storage, logger);
+var aggregator = new candleaggregator(config.candleStickSizeMinutes, storage, logger);
+var advisor = new tradingadvisor(config.indicatorSettings, config.candleStickSizeMinutes, false, storage, logger);
+var agent = new tradingagent(config.tradingEnabled, config.exchangeSettings, storage, exchangeapi, logger);
+var pusher = new pushservice(config.pushOver, logger);
+var monitor = new ordermonitor(exchangeapi, logger);
+var reporter = new profitreporter(config.exchangeSettings.currencyPair, db, exchangeapi, logger);
+var pricemon = new pricemonitor(config.stoplossSettings.percentageBought, config.stoplossSettings.percentageSold, config.candleStickSizeMinutes, storage, logger);
 //------------------------------IntializeModules
-
-//------------------------------AnnounceStart
-console.log('------------------------------------------');
-console.log('Starting BitBot v0.7.9');
-console.log('Real Trading Enabled = ' + config.tradingEnabled);
-console.log('Working Dir = ' + process.cwd());
-console.log('------------------------------------------');
-//------------------------------AnnounceStart
 
 retriever.on('update', function(ticks){
 
@@ -74,7 +74,7 @@ aggregator.on('update', function(cs){
 
     }
 
-    advisor.update(cs);
+    advisor.update(cs, false);
 
 });
 
@@ -130,15 +130,19 @@ monitor.on('filled', function(order) {
 
 });
 
-monitor.on('cancelled', function(order) {
+monitor.on('cancelled', function(order, retry) {
 
     reporter.updateBalance(false);
 
-    setTimeout(function(){
+    if(retry) {
 
-        agent.order(order.orderDetails.orderType);
+      cancelledOrderRetryTimeout = setTimeout(function(){
 
-    }, 1000 * 5);
+          agent.order(order.orderDetails.orderType);
+
+      }, 1000 * 5);
+
+    }
 
 });
 
@@ -156,12 +160,6 @@ pricemon.on('advice', function(advice) {
 
 });
 
-reporter.on('update', function(update){
-
-
-
-});
-
 reporter.on('report', function(report){
 
     if(config.pushOver.enabled) {
@@ -170,4 +168,31 @@ reporter.on('report', function(report){
 
 });
 
-processor.initialize();
+var start = function() {
+
+  //------------------------------AnnounceStart
+  console.log('------------------------------------------');
+  console.log('Starting BitBot v0.8.0');
+  console.log('Real Trading Enabled = ' + config.tradingEnabled);
+  console.log('Working Dir = ' + process.cwd());
+  console.log('------------------------------------------');
+  //------------------------------AnnounceStart
+
+  processor.initialize();
+
+};
+
+var stop = function(cb) {
+
+  retriever.stop();
+
+  clearTimeout(cancelledOrderRetryTimeout);
+
+  monitor.resolvePreviousOrder(function(){
+    logger.log('BitBot stopped succesfully!');
+    cb();
+  });
+
+};
+
+start();

@@ -1,8 +1,9 @@
 var _ = require('underscore');
 var push = require( 'pushover-notifications' );
-var logger = require('./loggingservice.js');
 
-var pusher = function(pushOver) {
+var pusher = function(pushOver, logger) {
+
+  this.logger = logger;
 
   if(pushOver.pushUserId && pushOver.pushAppToken) {
 
@@ -42,12 +43,12 @@ pusher.prototype.send = function(title, message, sound, priority) {
         throw err;
       }
 
-      logger.log('Push notification sent!');
+      this.logger.log('Push notification sent!');
     });
 
   } else {
 
-    logger.log('Push Service Misconfigured');
+    this.logger.log('Push Service Misconfigured');
 
   }
 

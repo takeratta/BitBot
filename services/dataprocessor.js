@@ -1,15 +1,13 @@
 var _ = require('underscore');
 var BigNumber = require('bignumber.js');
 var async = require('async');
-var logger = require('./loggingservice.js');
-var storage = require('./candlestorage.js');
-var tools = require('./tools.js');
+var tools = require('../util/tools.js');
 
-var dataprocessor = function(candleStickSize) {
-
-  this.candleStickSize = candleStickSize;
+var processor = function(storage, logger) {
 
   this.initialDBWriteDone = false;
+  this.storage = storage;
+  this.logger = logger;
 
   _.bindAll(this, 'updateCandleStick', 'createBaseCandleSticks', 'processInitialLoad', 'processUpdate', 'initialize', 'updateCandleDB');
 
@@ -18,10 +16,10 @@ var dataprocessor = function(candleStickSize) {
 //---EventEmitter Setup
 var Util = require('util');
 var EventEmitter = require('events').EventEmitter;
-Util.inherits(dataprocessor, EventEmitter);
+Util.inherits(processor, EventEmitter);
 //---EventEmitter Setup
 
-dataprocessor.prototype.updateCandleStick = function (candleStick, tick) {
+processor.prototype.updateCandleStick = function (candleStick, tick) {
 
   if(!candleStick.open) {
 
@@ -51,7 +49,7 @@ dataprocessor.prototype.updateCandleStick = function (candleStick, tick) {
 
 };
 
-dataprocessor.prototype.createBaseCandleSticks = function (callback) {
+processor.prototype.createBaseCandleSticks = function (callback) {
 
   var previousClose = 0;
 
@@ -61,7 +59,7 @@ dataprocessor.prototype.createBaseCandleSticks = function (callback) {
 
     var tickTimeStamp = this.ticks[0].date;
 
-    var lastStoragePeriod = storage.getLastNonEmptyPeriod();
+    var lastStoragePeriod = this.storage.getLastNonEmptyPeriod();
     var firstTickCandleStick = (Math.floor(tickTimeStamp/candleStickSizeSeconds)*candleStickSizeSeconds);
 
     if(lastStoragePeriod < firstTickCandleStick && lastStoragePeriod !== 0) {
@@ -77,9 +75,9 @@ dataprocessor.prototype.createBaseCandleSticks = function (callback) {
 
     while(endTimeStamp < this.ticks[0].date) {
 
-      previousClose = storage.getLastNonEmptyClose();
+      previousClose = this.storage.getLastNonEmptyClose();
 
-      storage.push({'period':startTimeStamp,'open':previousClose,'high':previousClose,'low':previousClose,'close':previousClose,'volume':0, 'vwap':previousClose});
+      this.storage.push({'period':startTimeStamp,'open':previousClose,'high':previousClose,'low':previousClose,'close':previousClose,'volume':0, 'vwap':previousClose});
 
       startTimeStamp = endTimeStamp;
       endTimeStamp = endTimeStamp + candleStickSizeSeconds;
@@ -95,22 +93,22 @@ dataprocessor.prototype.createBaseCandleSticks = function (callback) {
       while(tickTimeStamp >= endTimeStamp + candleStickSizeSeconds) {
 
         if(currentCandleStick.volume > 0) {
-          storage.push(currentCandleStick);
+          this.storage.push(currentCandleStick);
         }
 
         startTimeStamp = endTimeStamp;
         endTimeStamp = endTimeStamp + candleStickSizeSeconds;
 
-        previousClose = storage.getLastNonEmptyClose();
+        previousClose = this.storage.getLastNonEmptyClose();
 
-        storage.push({'period':startTimeStamp,'open':previousClose,'high':previousClose,'low':previousClose,'close':previousClose,'volume':0, 'vwap':previousClose});
+        this.storage.push({'period':startTimeStamp,'open':previousClose,'high':previousClose,'low':previousClose,'close':previousClose,'volume':0, 'vwap':previousClose});
 
       }
 
       if(tickTimeStamp >= endTimeStamp) {
 
         if(currentCandleStick.volume > 0) {
-          storage.push(currentCandleStick);
+          this.storage.push(currentCandleStick);
         }
 
         startTimeStamp = endTimeStamp;
@@ -130,7 +128,7 @@ dataprocessor.prototype.createBaseCandleSticks = function (callback) {
 
     if(currentCandleStick.volume > 0) {
 
-      storage.push(currentCandleStick);
+      this.storage.push(currentCandleStick);
 
       startTimeStamp = endTimeStamp;
       endTimeStamp = endTimeStamp + candleStickSizeSeconds;
@@ -142,9 +140,9 @@ dataprocessor.prototype.createBaseCandleSticks = function (callback) {
       var beginPeriod = i;
       var endPeriod = beginPeriod + candleStickSizeSeconds;
 
-      previousClose = storage.getLastNonEmptyClose();
+      previousClose = this.storage.getLastNonEmptyClose();
 
-      storage.push({'period':beginPeriod,'open':previousClose,'high':previousClose,'low':previousClose,'close':previousClose,'volume':0, 'vwap':previousClose});
+      this.storage.push({'period':beginPeriod,'open':previousClose,'high':previousClose,'low':previousClose,'close':previousClose,'volume':0, 'vwap':previousClose});
 
     }
 
@@ -158,12 +156,18 @@ dataprocessor.prototype.createBaseCandleSticks = function (callback) {
 
 };
 
-dataprocessor.prototype.processInitialLoad = function(err, result) {
+processor.prototype.processInitialLoad = function(err, result) {
 
   if(err) {
 
-    logger.error('Couldn\'t create candlesticks due to a database error');
-    logger.error(err.stack);
+    var parsedError = err;
+
+    if(err.stack) {
+      parsedError = err.stack;
+    }
+
+    this.logger.error('Couldn\'t create candlesticks due to a database error');
+    this.logger.error(parsedError);
 
     process.exit();
 
@@ -175,20 +179,26 @@ dataprocessor.prototype.processInitialLoad = function(err, result) {
 
 };
 
-dataprocessor.prototype.processUpdate = function(err, result) {
+processor.prototype.processUpdate = function(err, result) {
 
   this.ticks = [];
 
   if(err) {
 
-    logger.error('Couldn\'t create candlesticks due to a database error');
-    logger.error(err.stack);
+    var parsedError = err;
+
+    if(err.stack) {
+      parsedError = err.stack;
+    }
+
+    this.logger.error('Couldn\'t create candlesticks due to a database error');
+    this.logger.error(parsedError);
 
     process.exit();
 
   } else {
 
-    var latestCandleStick = storage.getLastNCandles(1)[0];
+    var latestCandleStick = this.storage.getLastNCandles(1)[0];
 
     if(!this.initialDBWriteDone) {
       this.emit('initialDBWrite');
@@ -203,17 +213,17 @@ dataprocessor.prototype.processUpdate = function(err, result) {
 
 };
 
-dataprocessor.prototype.initialize = function() {
+processor.prototype.initialize = function() {
 
   async.waterfall([
-    storage.getDBCandles
+    this.storage.getDBCandles
     ], this.processInitialLoad);
 
-  };
+};
 
-dataprocessor.prototype.updateCandleDB = function(ticks) {
+processor.prototype.updateCandleDB = function(ticks) {
 
-  var period = storage.getLastNonEmptyPeriod();
+  var period = this.storage.getLastNonEmptyPeriod();
 
   this.ticks = _.filter(ticks,function(tick){
 
@@ -223,9 +233,9 @@ dataprocessor.prototype.updateCandleDB = function(ticks) {
 
   async.waterfall([
     this.createBaseCandleSticks,
-    storage.materialise
+    this.storage.materialise
     ], this.processUpdate);
 
 };
 
-module.exports = dataprocessor;
+module.exports = processor;

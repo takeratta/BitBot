@@ -64,11 +64,11 @@ indicator.prototype.calculate = function(cs) {
 
   if(this.length >= this.options.neededPeriods) {
 
-    return this.advice;
+    return {advice: this.advice, indicatorValue: this.indicator.result};
 
   } else {
 
-    return 'hold';
+    return {advice: 'hold', indicatorValue: null};
 
   }
 

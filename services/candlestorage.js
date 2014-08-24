@@ -1,11 +1,12 @@
 var _ = require('underscore');
 var BigNumber = require('bignumber.js');
-var tools = require('./tools.js');
-var db = require('./db.js');
+var tools = require('../util/tools.js');
 
-var storage = function() {
+var storage = function(db, logger) {
 
 	this.candleSticksCollection = [];
+	this.db = db;
+	this.logger = logger;
 
 	_.bindAll(this, 'selectCollection', 'set', 'push', 'removeOldCandles', 'flush', 'getAllCandlesSince', 'getLastNCandles', 'getLastPeriod', 'getLastNonEmptyPeriod', 'getLastClose', 'getLastNonEmptyClose', 'getCandle', 'length', 'getAverageCandleStickSize', 'generateWebServerArray', 'getFinishedAggregatedCandleSticks', 'getLastCompleteAggregatedCandleStick', 'getAggregatedCandleSticks', 'materialise', 'getDBCandles');
 
@@ -96,7 +97,7 @@ storage.prototype.removeOldCandles = function() {
 		});
 
 		if(candleStickSize === 1) {
-			db.removeOldDBCandles(oldPeriod);
+			this.db.removeOldDBCandles(oldPeriod);
 		}
 
 	}, this);
@@ -352,11 +353,11 @@ storage.prototype.getAggregatedCandleSticks = function(candleStickSize) {
 
 storage.prototype.materialise = function(callback) {
 	var candleStickArray = this.selectCollection(1);
-	db.materialise(candleStickArray.candleSticks, callback);
+	this.db.materialise(candleStickArray.candleSticks, callback);
 };
 
 storage.prototype.getDBCandles = function(callback) {
-	db.getDBCandles(function(err, storageCandleSticks) {
+	this.db.getDBCandles(function(err, storageCandleSticks) {
 
 		if(!err && storageCandleSticks) {
 			this.set(storageCandleSticks);
@@ -368,6 +369,4 @@ storage.prototype.getDBCandles = function(callback) {
 	}.bind(this));
 };
 
-var candlestorage = new storage();
-
-module.exports = candlestorage;
+module.exports = storage;

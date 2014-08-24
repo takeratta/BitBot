@@ -73,6 +73,11 @@ Please read up on the following articles to help you choose the settings that be
 
 As of version 0.7 BitBot now uses indicators as small plugins. You can create your own indicator by using the following template:
 
+	//-------------------- REMOVE THIS BLOCK
+	console.log('If you want this code to do anything, remove this code block!');
+	process.exit();
+	//-------------------- REMOVE THIS BLOCK
+
 	var _ = require('underscore');
 	var BigNumber = require('bignumber.js');
 
@@ -101,8 +106,8 @@ As of version 0.7 BitBot now uses indicators as small plugins. You can create yo
 
 		// Insert your calculation logic here
 
-		// When done you should always return either 'buy', 'sell' or 'hold'
-		return advice;
+		// When done you should always return either 'buy', 'sell' or 'hold' And either the indicatorResult or the value null
+		return {advice: advice, indicatorResult: indicatorResult};
 
 	};
 

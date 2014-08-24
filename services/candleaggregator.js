@@ -1,11 +1,11 @@
 var _ = require('underscore');
 var BigNumber = require('bignumber.js');
-var logger = require('./loggingservice.js');
-var storage = require('./candlestorage.js');
 
-var aggregator = function(candleStickSize) {
+var aggregator = function(candleStickSizeMinutes, storage, logger) {
 
-	this.candleStickSize = candleStickSize;
+	this.storage = storage;
+	this.candleStickSize = candleStickSizeMinutes;
+	this.logger = logger;
 
 	_.bindAll(this, 'update');
 
@@ -19,28 +19,28 @@ Util.inherits(aggregator, EventEmitter);
 
 aggregator.prototype.update = function() {
 
-	if(storage.length(this.candleStickSize) > 0) {
+	if(this.storage.length(this.candleStickSize) > 0) {
 
-		this.previousCandlePeriod = storage.getLastNonEmptyPeriod(this.candleStickSize);
+		this.previousCandlePeriod = this.storage.getLastNonEmptyPeriod(this.candleStickSize);
 
-		var cs = storage.getLastCompleteAggregatedCandleStick(this.candleStickSize);
+		var cs = this.storage.getLastCompleteAggregatedCandleStick(this.candleStickSize);
 
-		this.latestCandlePeriod = storage.getLastNonEmptyPeriod(this.candleStickSize);
+		this.latestCandlePeriod = this.storage.getLastNonEmptyPeriod(this.candleStickSize);
 
 		if(this.latestCandlePeriod > this.previousCandlePeriod) {
 
-			logger.log('Created a new ' + this.candleStickSize + ' minute candlestick!');
-			logger.log(JSON.stringify(cs));
+			this.logger.log('Created a new ' + this.candleStickSize + ' minute candlestick!');
+			this.logger.log(JSON.stringify(cs));
 
 			this.emit('update', cs);
 
-			storage.removeOldCandles();
+			this.storage.removeOldCandles();
 
 		}
 
 	} else {
 
-		storage.getFinishedAggregatedCandleSticks(this.candleStickSize);
+		this.storage.getFinishedAggregatedCandleSticks(this.candleStickSize);
 
 	}
 

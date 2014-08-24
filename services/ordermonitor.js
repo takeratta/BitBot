@@ -1,23 +1,24 @@
 var _ = require('underscore');
 var BigNumber = require('bignumber.js');
-var logger = require('./loggingservice.js');
-var api = require('./api.js');
 
-var ordermonitor = function() {
+var monitor = function(exchangeapi, logger) {
+
+  this.exchangeapi = exchangeapi;
+  this.logger = logger;
 
   _.bindAll(this, 'checkFilled', 'processCancellation', 'processSimulation', 'add', 'resolvePreviousOrder');
 
-  this.checkOrder = {};
+  this.checkOrder = {status: 'resolved'};
 
 };
 
 //---EventEmitter Setup
 var Util = require('util');
 var EventEmitter = require('events').EventEmitter;
-Util.inherits(ordermonitor, EventEmitter);
+Util.inherits(monitor, EventEmitter);
 //---EventEmitter Setup
 
-ordermonitor.prototype.checkFilled = function(checkOrder, filled) {
+monitor.prototype.checkFilled = function(checkOrder, filled) {
 
   if(checkOrder.status !== 'filled') {
 
@@ -28,7 +29,7 @@ ordermonitor.prototype.checkFilled = function(checkOrder, filled) {
       clearInterval(checkOrder.interval);
       clearTimeout(checkOrder.timeout);
 
-      logger.log('Order (' + checkOrder.id + ') filled succesfully!');
+      this.logger.log('Order (' + checkOrder.id + ') filled succesfully!');
 
       this.emit('filled', checkOrder);
 
@@ -38,21 +39,21 @@ ordermonitor.prototype.checkFilled = function(checkOrder, filled) {
 
 };
 
-ordermonitor.prototype.processCancellation = function(checkOrder, cancelled) {
+monitor.prototype.processCancellation = function(checkOrder, cancelled, retry) {
 
   if(cancelled && checkOrder.status !== 'cancelled') {
 
     checkOrder.status = 'cancelled';
 
-    logger.log('Order (' + checkOrder.id + ') cancelled!');
+    this.logger.log('Order (' + checkOrder.id + ') cancelled!');
 
-    this.emit('cancelled', checkOrder);
+    this.emit('cancelled', checkOrder, retry);
 
   } else if(checkOrder.status !== 'filled') {
 
     checkOrder.status = 'filled';
 
-    logger.log('Order (' + checkOrder.id + ') filled succesfully!');
+    this.logger.log('Order (' + checkOrder.id + ') filled succesfully!');
 
     this.emit('filled', checkOrder);
 
@@ -60,9 +61,9 @@ ordermonitor.prototype.processCancellation = function(checkOrder, cancelled) {
 
 };
 
-ordermonitor.prototype.processSimulation = function(checkOrder) {
+monitor.prototype.processSimulation = function(checkOrder) {
 
-  logger.log('Order (' + checkOrder.id + ') filled succesfully!');
+  this.logger.log('Order (' + checkOrder.id + ') filled succesfully!');
 
   checkOrder.status = 'filled';
 
@@ -70,61 +71,74 @@ ordermonitor.prototype.processSimulation = function(checkOrder) {
 
 };
 
-ordermonitor.prototype.add = function(orderDetails, cancelTime) {
+monitor.prototype.add = function(orderDetails, cancelTime) {
 
-  this.resolvePreviousOrder();
+  var wrapper = function() {
 
-  this.checkOrder = {id:orderDetails.order, orderDetails:orderDetails, status:'open'};
+    this.checkOrder = {id:orderDetails.order, orderDetails:orderDetails, status:'open'};
 
-  logger.log('Monitoring order: ' + this.checkOrder.id + ' (Cancellation after ' + cancelTime + ' minutes)');
+    this.logger.log('Monitoring order: ' + this.checkOrder.id + ' (Cancellation after ' + cancelTime + ' minutes)');
 
-  if(this.checkOrder.id === 'Simulated') {
+    if(this.checkOrder.id === 'Simulated') {
 
-    this.processSimulation(this.checkOrder);
+      this.processSimulation(this.checkOrder);
 
-  } else {
+    } else {
 
-    this.checkOrder.interval = setInterval(function() {
+      this.checkOrder.interval = setInterval(function() {
 
-      api.orderFilled(this.checkOrder.id, false, function(err, response){
-        if(!err) {
-          this.checkFilled(this.checkOrder, response);
-        }
-      }.bind(this));
-
-    }.bind(this), 1000 * 10);
-
-    this.checkOrder.timeout = setTimeout(function() {
-
-      clearInterval(this.checkOrder.interval);
-
-      if(this.checkOrder.status === 'open') {
-
-        logger.log('Cancelling order: ' + this.checkOrder.id);
-
-        api.cancelOrder(this.checkOrder.id, true, function(err, response) {
-          this.processCancellation(this.checkOrder, response);
+        this.exchangeapi.orderFilled(this.checkOrder.id, false, function(err, response){
+          if(!err) {
+            this.checkFilled(this.checkOrder, response);
+          }
         }.bind(this));
 
-      }
+      }.bind(this), 1000 * 10);
 
-    }.bind(this), 1000 * 60 * cancelTime);
+      this.checkOrder.timeout = setTimeout(function() {
 
-  }
+        clearInterval(this.checkOrder.interval);
+
+        if(this.checkOrder.status === 'open') {
+
+          this.logger.log('Cancelling order: ' + this.checkOrder.id);
+
+          this.exchangeapi.cancelOrder(this.checkOrder.id, true, function(err, response) {
+            this.processCancellation(this.checkOrder, response, true);
+          }.bind(this));
+
+        }
+
+      }.bind(this), 1000 * 60 * cancelTime);
+
+    }
+
+  }.bind(this);
+
+  this.resolvePreviousOrder(wrapper);
 
 };
 
-ordermonitor.prototype.resolvePreviousOrder = function() {
+monitor.prototype.resolvePreviousOrder = function(cb) {
 
-  if(this.checkOrder.status === 'open') {
+  if(this.checkOrder.status === 'open' && this.checkOrder.id !== 'Simulated') {
 
     clearInterval(this.checkOrder.interval);
     clearTimeout(this.checkOrder.timeout);
 
-    this.checkOrder.status = 'resolved';
+    this.logger.log('Cancelling order: ' + this.checkOrder.id);
 
+    this.exchangeapi.cancelOrder(this.checkOrder.id, true, function(err, response) {
+      this.processCancellation(this.checkOrder, response, false);
+      this.checkOrder.status = 'resolved';
+      this.logger.log('Previous order (' + this.checkOrder.id + ') resolved!');
+      cb();
+    }.bind(this));
+
+  } else {
+    cb();
   }
 
 };
 
-module.exports = ordermonitor;
+module.exports = monitor;

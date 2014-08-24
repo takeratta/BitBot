@@ -1,3 +1,8 @@
+//-------------------- REMOVE THIS BLOCK
+console.log('If you want this code to do anything, remove this code block!');
+process.exit();
+//-------------------- REMOVE THIS BLOCK
+
 var _ = require('underscore');
 var BigNumber = require('bignumber.js');
 
@@ -26,8 +31,8 @@ indicator.prototype.calculate = function(cs) {
 
   // Insert your calculation logic here
 
-  // When done you should always return either 'buy', 'sell' or 'hold'
-  return advice;
+  // When done you should always return either 'buy', 'sell' or 'hold' And either the indicatorResult or the value null
+  return {advice: advice, indicatorResult: indicatorResult};
 
 };
 

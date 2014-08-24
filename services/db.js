@@ -2,14 +2,13 @@ var _ = require('underscore');
 var mongo = require('mongojs');
 var async = require('async');
 
-//------------------------------Config
-var config = require('../config.js');
-//------------------------------Config
+var db = function(exchangeSettings, mongoConnectionString, logger) {
 
-var db = function() {
-
-	this.pair = config.exchangeSettings.currencyPair.pair;
-	this.dbCollectionName = config.exchangeSettings.exchange + config.exchangeSettings.currencyPair.pair;
+	this.pair = exchangeSettings.currencyPair.pair;
+	this.exchange = exchangeSettings.exchange;
+	this.dbCollectionName = exchangeSettings.exchange + exchangeSettings.currencyPair.pair;
+	this.mongoConnectionString = mongoConnectionString;
+	this.logger = logger;
 
 	_.bindAll(this, 'materialise', 'removeOldDBCandles', 'getDBCandles', 'getInitialBalance', 'setInitialBalance');
 
@@ -17,62 +16,70 @@ var db = function() {
 
 db.prototype.materialise = function(candleStickArray, callback) {
 
-	var csDatastore = mongo(config.mongoConnectionString);
+	var csDatastore = mongo(this.mongoConnectionString);
 	var csCollection = csDatastore.collection(this.dbCollectionName);
 
 	csCollection.find({volume: {$gt:0}}).sort({period:-1}).limit(1,function(err, sticks) {
 
-		var filterPeriod = 0;
+		if(err) {
 
-		if(!err && sticks.length > 0) {
+			callback(err);
 
-			filterPeriod = sticks[0].period;
+		} else {
 
-		}
+			var filterPeriod = 0;
 
-		materialiseCs = _.filter(candleStickArray, function(cs){
+			if(sticks.length > 0) {
 
-			return cs.period >= filterPeriod;
+				filterPeriod = sticks[0].period;
 
-		});
+			}
 
-		if(materialiseCs.length > 0) {
+			materialiseCs = _.filter(candleStickArray, function(cs){
 
-			async.eachSeries(materialiseCs, function(cs, cb) {
+				return cs.period >= filterPeriod;
 
-				csCollection.update({period: cs.period}, cs, { upsert: true }, function(err, doc) {
+			});
+
+			if(materialiseCs.length > 0) {
+
+				async.eachSeries(materialiseCs, function(cs, cb) {
+
+					csCollection.update({period: cs.period}, cs, { upsert: true }, function(err, doc) {
+
+						if(err) {
+
+							cb(err);
+
+						} else {
+
+							cb();
+
+						}
+
+					});
+
+				}, function(err) {
+
+					csDatastore.close();
 
 					if(err) {
 
-						cb(err);
+						callback(err);
 
 					} else {
 
-						cb();
+						callback(null);
 
 					}
 
 				});
 
-			}, function(err) {
+			} else {
 
-				csDatastore.close();
+				callback(null);
 
-				if(err) {
-
-					callback(err);
-
-				} else {
-
-					callback(null);
-
-				}
-
-			});
-
-		} else {
-
-			callback(null);
+			}
 
 		}
 
@@ -82,7 +89,7 @@ db.prototype.materialise = function(candleStickArray, callback) {
 
 db.prototype.removeOldDBCandles = function(filterPeriod) {
 
-	var csDatastore = mongo(config.mongoConnectionString);
+	var csDatastore = mongo(this.mongoConnectionString);
 	var csCollection = csDatastore.collection(this.dbCollectionName);
 
 	csCollection.remove({ period: { $lte: filterPeriod } }, function(err, resp) {
@@ -95,7 +102,7 @@ db.prototype.removeOldDBCandles = function(filterPeriod) {
 
 db.prototype.getDBCandles = function(callback) {
 
-	var csDatastore = mongo(config.mongoConnectionString);
+	var csDatastore = mongo(this.mongoConnectionString);
 	var csCollection = csDatastore.collection(this.dbCollectionName);
 
 	csCollection.ensureIndex({period: 1});
@@ -128,10 +135,10 @@ db.prototype.getDBCandles = function(callback) {
 
 db.prototype.getInitialBalance = function(callback) {
 
-	var csDatastore = mongo(config.mongoConnectionString);
+	var csDatastore = mongo(this.mongoConnectionString);
 	var csCollection = csDatastore.collection('balance');
 
-	csCollection.find({pair: this.pair}).limit(1, function(err, balance) {
+	csCollection.find({exchangePair: this.dbCollectionName}).limit(1, function(err, balance) {
 
 		csDatastore.close();
 
@@ -157,10 +164,10 @@ db.prototype.getInitialBalance = function(callback) {
 
 db.prototype.setInitialBalance = function(initialBalance, callback) {
 
-	var csDatastore = mongo(config.mongoConnectionString);
+	var csDatastore = mongo(this.mongoConnectionString);
 	var csCollection = csDatastore.collection('balance');
 
-	csCollection.update({pair: this.pair}, {pair: this.pair, initialBalance: initialBalance}, { upsert: true }, function(err, doc) {
+	csCollection.update({exchangePair: this.dbCollectionName}, {exchangePair: this.dbCollectionName, initialBalance: initialBalance}, { upsert: true }, function(err, doc) {
 
 		csDatastore.close();
 
@@ -178,6 +185,4 @@ db.prototype.setInitialBalance = function(initialBalance, callback) {
 
 };
 
-var database = new db();
-
-module.exports = database;
+module.exports = db;

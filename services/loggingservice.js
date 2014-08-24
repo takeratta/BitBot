@@ -1,13 +1,9 @@
 var moment = require('moment');
 var _ = require('underscore');
 
-//------------------------------Config
-var config = require('../config.js');
-//------------------------------Config
+var logger = function(debug) {
 
-var logger = function() {
-
-  this.debugEnabled = config.debug;
+  this.debugEnabled = debug;
 
   _.bindAll(this, 'log', 'debug', 'error');
 
@@ -16,7 +12,7 @@ var logger = function() {
 logger.prototype.log = function(message) {
 
   var now = moment(new Date()).format('DD-MM-YYYY HH:mm:ss');
-  
+
   console.log('[' + now + '] (INFO) ' + message);
 
 };
@@ -41,6 +37,4 @@ logger.prototype.error = function(message) {
 
 };
 
-var loggingservice = new logger();
-
-module.exports = loggingservice;
+module.exports = logger;

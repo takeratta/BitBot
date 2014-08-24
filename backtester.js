@@ -2,28 +2,33 @@ var _ = require('underscore');
 var BigNumber = require('bignumber.js');
 var moment = require('moment');
 
+var loggingservice = require('./services/loggingservice.js');
+var database = require('./services/db.js');
+var candlestorage = require('./services/candlestorage.js');
+var exchangeapiservice = require('./services/exchangeapi.js');
 var dataprocessor = require('./services/dataprocessor.js');
 var tradingadvisor = require('./services/tradingadvisor.js');
-var pushservice = require('./services/pushservice.js');
-var storage = require('./services/candlestorage.js');
-var logger = require('./services/loggingservice.js');
 var pricemonitor = require('./services/pricemonitor.js');
-var api = require('./services/api.js');
 
 //------------------------------Config
 var config = require('./config.js');
 //------------------------------Config
 
 //------------------------------IntializeModules
-var processor = new dataprocessor(config.candleStickSizeMinutes);
-var advisor = new tradingadvisor(config.indicatorSettings, config.candleStickSizeMinutes, true);
-var pricemon = new pricemonitor(config.stoplossSettings.percentageBought, config.stoplossSettings.percentageSold, config.candleStickSizeMinutes);
+var logger = new loggingservice(config.debug);
+var db = new database(config.exchangeSettings, config.mongoConnectionString, logger);
+var storage = new candlestorage(db, logger);
+var exchangeapi = new exchangeapiservice(config.exchangeSettings, config.apiSettings, logger);
+var processor = new dataprocessor(storage, logger);
+var advisor = new tradingadvisor(config.indicatorSettings, config.candleStickSizeMinutes, true, storage, logger);
+var pricemon = new pricemonitor(config.stoplossSettings.percentageBought, config.stoplossSettings.percentageSold, config.candleStickSizeMinutes, storage, logger);
 //------------------------------IntializeModules
 
 //------------------------------IntializeVariables
 var candleStickSizeMinutes = config.candleStickSizeMinutes;
 var stopLossEnabled = config.stoplossSettings.enabled;
 var initialBalance = config.backTesting.initialBalance;
+var slippagePercentage = config.exchangeSettings.slippagePercentage;
 var USDBalance = initialBalance;
 var BTCBalance = 0;
 var initialBalanceBTC = 0;
@@ -42,6 +47,8 @@ var totalFeeCostsPercentage = 0;
 var transactions = 0;
 var slTransactions = 0;
 var lastClose = 0;
+var lastClosePlusSlippage = 0;
+var lastCloseMinusSlippage = 0;
 var csPeriod = 0;
 var entryUSD = 0;
 var exitUSD = 0;
@@ -59,7 +66,7 @@ var endDate;
 
 //------------------------------AnnounceStart
 console.log('------------------------------------------');
-console.log('Starting BitBot Back-Tester v0.7.9');
+console.log('Starting BitBot Back-Tester v0.8.0');
 console.log('Working Dir = ' + process.cwd());
 console.log('------------------------------------------');
 //------------------------------AnnounceStart
@@ -74,14 +81,16 @@ var createOrder = function(type, stopLoss) {
 
       usableBalance = Number(BigNumber(USDBalance).times(BigNumber(1).minus(BigNumber(transactionFee).dividedBy(BigNumber(100)))));
 
+      lastClosePlusSlippage = Number(BigNumber(lastClose).times(BigNumber(1).plus(BigNumber(slippagePercentage).dividedBy(BigNumber(100)))).round(2));
+
       totalTradedVolume = Number(BigNumber(totalTradedVolume).plus(BigNumber(usableBalance)).round(2));
 
       totalFeeCosts = Number(BigNumber(totalFeeCosts).plus(BigNumber(USDBalance).times(BigNumber(transactionFee).dividedBy(BigNumber(100))).round(2)));
 
-      BTCBalance = Number(BigNumber(BTCBalance).plus(BigNumber(usableBalance).dividedBy(BigNumber(lastClose)).round(2)));
+      BTCBalance = Number(BigNumber(BTCBalance).plus(BigNumber(usableBalance).dividedBy(BigNumber(lastClosePlusSlippage)).round(2)));
       USDBalance = 0;
 
-      var newUSDBalance = Number(BigNumber(BTCBalance).times(BigNumber(lastClose)).round(2));
+      var newUSDBalance = Number(BigNumber(BTCBalance).times(BigNumber(lastClosePlusSlippage)).round(2));
 
       if(newUSDBalance > highestUSDValue) {
         highestUSDValue = newUSDBalance;
@@ -96,20 +105,22 @@ var createOrder = function(type, stopLoss) {
         logger.log('Stop loss Triggered an order:');
       }
 
-      logger.log('Placed buy order ' + BTCBalance + ' @ ' + lastClose);
+      logger.log('Placed buy order ' + BTCBalance + ' @ ' + lastClosePlusSlippage);
 
-      pricemon.setPosition('bought', lastClose);
-      advisor.setPosition({pos: 'bought', price: lastClose});
+      pricemon.setPosition('bought', lastClosePlusSlippage);
+      advisor.setPosition({pos: 'bought', price: lastClosePlusSlippage});
 
   } else if(type === 'sell' && BTCBalance !== 0) {
 
       usableBalance = Number(BigNumber(BTCBalance).times(BigNumber(1).minus(BigNumber(transactionFee).dividedBy(BigNumber(100)))));
 
-      totalTradedVolume = Number(BigNumber(totalTradedVolume).plus(BigNumber(usableBalance).times(BigNumber(lastClose))).round(2));
+      lastCloseMinusSlippage = Number(BigNumber(lastClose).times(BigNumber(1).minus(BigNumber(slippagePercentage).dividedBy(BigNumber(100)))).round(2));
 
-      totalFeeCosts = Number(BigNumber(totalFeeCosts).plus(BigNumber(BTCBalance).times(BigNumber(transactionFee).dividedBy(BigNumber(100))).times(lastClose).round(2)));
+      totalTradedVolume = Number(BigNumber(totalTradedVolume).plus(BigNumber(usableBalance).times(BigNumber(lastCloseMinusSlippage))).round(2));
 
-      USDBalance = Number(BigNumber(USDBalance).plus(BigNumber(usableBalance).times(BigNumber(lastClose)).round(2)));
+      totalFeeCosts = Number(BigNumber(totalFeeCosts).plus(BigNumber(BTCBalance).times(BigNumber(transactionFee).dividedBy(BigNumber(100))).times(lastCloseMinusSlippage).round(2)));
+
+      USDBalance = Number(BigNumber(USDBalance).plus(BigNumber(usableBalance).times(BigNumber(lastCloseMinusSlippage)).round(2)));
       BTCBalance = 0;
 
       if(USDBalance > highestUSDValue) {
@@ -139,10 +150,10 @@ var createOrder = function(type, stopLoss) {
         logger.log('Stop loss Triggered an order:');
       }
 
-      logger.log('Placed sell order ' + usableBalance + ' @ ' + lastClose);
+      logger.log('Placed sell order ' + usableBalance + ' @ ' + lastCloseMinusSlippage);
 
-      pricemon.setPosition('sold', lastClose);
-      advisor.setPosition({pos: 'sold', price: lastClose});
+      pricemon.setPosition('sold', lastCloseMinusSlippage);
+      advisor.setPosition({pos: 'sold', price: lastCloseMinusSlippage});
 
   } else {
 
@@ -154,7 +165,7 @@ var createOrder = function(type, stopLoss) {
 
 processor.on('initialized', function(){
 
-    api.getBalance(true, function(err, result){
+    exchangeapi.getBalance(true, function(err, result){
 
         transactionFee = result.fee;
 

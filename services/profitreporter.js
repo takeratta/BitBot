@@ -1,13 +1,13 @@
 var _ = require('underscore');
 var BigNumber = require('bignumber.js');
 var async = require('async');
-var logger = require('./loggingservice.js');
-var db = require('./db.js');
-var api = require('./api.js');
 
-var profitreporter = function(currencyPair) {
+var reporter = function(currencyPair, db, exchangeapi, logger) {
 
   this.currencyPair = currencyPair;
+  this.db = db;
+  this.exchangeapi = exchangeapi;
+  this.logger = logger;
 
   _.bindAll(this, 'intialize', 'createReport', 'processBalance', 'start', 'updateBalance');
 
@@ -16,10 +16,10 @@ var profitreporter = function(currencyPair) {
 //---EventEmitter Setup
 var Util = require('util');
 var EventEmitter = require('events').EventEmitter;
-Util.inherits(profitreporter, EventEmitter);
+Util.inherits(reporter, EventEmitter);
 //---EventEmitter Setup
 
-profitreporter.prototype.intialize = function(err, result) {
+reporter.prototype.intialize = function(err, result) {
 
   this.currencyBalance = parseFloat(result.balance.currencyAvailable);
   this.assetBalance = Number(BigNumber(parseFloat(result.balance.assetAvailable)).round(2));
@@ -29,19 +29,19 @@ profitreporter.prototype.intialize = function(err, result) {
 
   this.initalTotalCurrencyBalance = Number(BigNumber(this.currencyBalance).plus(this.assetBalanceInCurrency).round(2));
 
-  db.setInitialBalance(this.initalTotalCurrencyBalance, function(err) {
+  this.db.setInitialBalance(this.initalTotalCurrencyBalance, function(err) {
 
     if(err) {
 
-      logger.error('Couldn\'t get initialBalance due to a database error');
-      logger.error(err.stack);
+      this.logger.error('Couldn\'t get initialBalance due to a database error');
+      this.logger.error(err.stack);
 
       process.exit();
 
     } else {
 
       if(this.resetInitialBalances) {
-        logger.log(this.currencyPair.pair + ' Balance reset successfully, change the configuration setting back to false and restart the application.');
+        this.logger.log(this.currencyPair.pair + ' Balance reset successfully, change the configuration setting back to false and restart the application.');
         process.exit();
       }
 
@@ -51,17 +51,17 @@ profitreporter.prototype.intialize = function(err, result) {
 
 };
 
-profitreporter.prototype.createReport = function() {
+reporter.prototype.createReport = function() {
 
   var report = this.currencyPair.asset + ': ' + this.assetBalance + ' ' + this.currencyPair.currency + ': ' + this.currencyBalance + ' Total in ' + this.currencyPair.currency + ': ' + this.totalCurrencyBalance + ' Profit: ' + this.profitAbsolute + ' (' + this.profitPercentage + '%)';
 
-  logger.log('Profit Report: ' + report);
+  this.logger.log('Profit Report: ' + report);
 
   this.emit('report', report);
 
 };
 
-profitreporter.prototype.processBalance = function(err, result) {
+reporter.prototype.processBalance = function(err, result) {
 
   this.currencyBalance = parseFloat(result.balance.currencyAvailable);
   this.assetBalance = Number(BigNumber(parseFloat(result.balance.assetAvailable)).round(2));
@@ -77,20 +77,18 @@ profitreporter.prototype.processBalance = function(err, result) {
     this.createReport();
   }
 
-  this.emit('update', {'asset': this.currencyPair.asset, 'currency': this.currencyPair.currency, 'currencyBalance': this.currencyBalance, 'assetBalance': this.assetBalance, 'profitAbsolute': this.profitAbsolute, 'profitPercentage': this.profitPercentage});
-
 };
 
-profitreporter.prototype.start = function(resetInitialBalances) {
+reporter.prototype.start = function(resetInitialBalances) {
 
   this.resetInitialBalances = resetInitialBalances;
 
-  db.getInitialBalance(function(err, result) {
+  this.db.getInitialBalance(function(err, result) {
 
     if(err) {
 
-      logger.error('Couldn\'t get initialBalance due to a database error');
-      logger.error(err.stack);
+      this.logger.error('Couldn\'t get initialBalance due to a database error');
+      this.logger.error(err.stack);
 
       process.exit();
 
@@ -104,8 +102,8 @@ profitreporter.prototype.start = function(resetInitialBalances) {
 
         async.series(
           {
-            balance: function(cb) {api.getBalance(true, cb);},
-            orderBook: function(cb) {api.getOrderBook(true, cb);}
+            balance: function(cb) {this.exchangeapi.getBalance(true, cb);}.bind(this),
+            orderBook: function(cb) {this.exchangeapi.getOrderBook(true, cb);}.bind(this)
           },
           this.intialize
         );
@@ -118,18 +116,18 @@ profitreporter.prototype.start = function(resetInitialBalances) {
 
 };
 
-profitreporter.prototype.updateBalance = function(includeReport) {
+reporter.prototype.updateBalance = function(includeReport) {
 
   this.includeReport = includeReport;
 
   async.series(
     {
-      balance: function(cb) {api.getBalance(true, cb);},
-      orderBook: function(cb) {api.getOrderBook(true, cb);}
+      balance: function(cb) {this.exchangeapi.getBalance(true, cb);}.bind(this),
+      orderBook: function(cb) {this.exchangeapi.getOrderBook(true, cb);}.bind(this)
     },
     this.processBalance
   );
 
 };
 
-module.exports = profitreporter;
+module.exports = reporter;

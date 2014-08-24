@@ -1,29 +1,29 @@
 var _ = require('underscore');
 var BigNumber = require('bignumber.js');
 var async = require('async');
-var logger = require('./loggingservice.js');
-var storage = require('./candlestorage.js');
-var api = require('./api.js');
 
-var tradingagent = function(tradingEnabled, exchangeSettings) {
+var agent = function(tradingEnabled, exchangeSettings, storage, exchangeapi, logger) {
 
 	_.bindAll(this, 'order', 'calculateOrder', 'placeRealOrder', 'placeSimulatedOrder', 'processOrder');
 
-    this.tradingEnabled = tradingEnabled;
-    this.currencyPair = exchangeSettings.currencyPair;
-    this.tradingReserveAsset = exchangeSettings.tradingReserveAsset;
-    this.tradingReserveCurrency = exchangeSettings.tradingReserveCurrency;
-    this.slippagePercentage = exchangeSettings.slippagePercentage;
+  this.tradingEnabled = tradingEnabled;
+  this.currencyPair = exchangeSettings.currencyPair;
+  this.tradingReserveAsset = exchangeSettings.tradingReserveAsset;
+  this.tradingReserveCurrency = exchangeSettings.tradingReserveCurrency;
+  this.slippagePercentage = exchangeSettings.slippagePercentage;
+	this.storage = storage;
+	this.exchangeapi = exchangeapi;
+	this.logger = logger;
 
 };
 
 //---EventEmitter Setup
 var Util = require('util');
 var EventEmitter = require('events').EventEmitter;
-Util.inherits(tradingagent, EventEmitter);
+Util.inherits(agent, EventEmitter);
 //---EventEmitter Setup
 
-tradingagent.prototype.order = function(orderType) {
+agent.prototype.order = function(orderType) {
 
 	this.orderDetails = {};
 
@@ -44,15 +44,15 @@ tradingagent.prototype.order = function(orderType) {
 
 	async.series(
 		{
-			balance: function(cb) {api.getBalance(true, cb);},
-			orderBook: function(cb) {api.getOrderBook(true, cb);}
+			balance: function(cb) {this.exchangeapi.getBalance(true, cb);}.bind(this),
+			orderBook: function(cb) {this.exchangeapi.getOrderBook(true, cb);}.bind(this)
 		},
 		process.bind(this)
 	);
 
 };
 
-tradingagent.prototype.calculateOrder = function(result) {
+agent.prototype.calculateOrder = function(result) {
 
 	this.orderDetails.assetBalance = parseFloat(result.balance.assetAvailable);
 	this.orderDetails.currencyBalance = parseFloat(result.balance.currencyAvailable);
@@ -60,11 +60,11 @@ tradingagent.prototype.calculateOrder = function(result) {
 
 	var orderBook = result.orderBook;
 
-	var lastClose = storage.getLastClose();
+	var lastClose = this.storage.getLastClose();
 	var minClose = Number(BigNumber(lastClose).times(BigNumber(0.9975)).round(2));
 	var maxClose = Number(BigNumber(lastClose).times(BigNumber(1.0025)).round(2));
 
-	logger.log('Preparing to place a ' + this.orderDetails.orderType + ' order! (' + this.currencyPair.asset + ' Balance: ' + this.orderDetails.assetBalance + ' ' + this.currencyPair.currency + ' Balance: ' + this.orderDetails.currencyBalance + ' Trading Fee: ' + this.orderDetails.tradingFee +')');
+	this.logger.log('Preparing to place a ' + this.orderDetails.orderType + ' order! (' + this.currencyPair.asset + ' Balance: ' + this.orderDetails.assetBalance + ' ' + this.currencyPair.currency + ' Balance: ' + this.orderDetails.currencyBalance + ' Trading Fee: ' + this.orderDetails.tradingFee +')');
 
 	if(this.orderDetails.orderType === 'buy') {
 
@@ -82,7 +82,7 @@ tradingagent.prototype.calculateOrder = function(result) {
 		var lowestAskWithSlippage = Number(BigNumber(lowestAsk).times(BigNumber(1).plus(BigNumber(this.slippagePercentage).dividedBy(BigNumber(100)))).round(2));
 		var balance = (BigNumber(this.orderDetails.currencyBalance).minus(BigNumber(this.tradingReserveCurrency))).times(BigNumber(1).minus(BigNumber(this.orderDetails.tradingFee).dividedBy(BigNumber(100))));
 
-		logger.log('Lowest Ask: ' + lowestAsk + ' Lowest Ask With Slippage: ' + lowestAskWithSlippage);
+		this.logger.log('Lowest Ask: ' + lowestAsk + ' Lowest Ask With Slippage: ' + lowestAskWithSlippage);
 
 		this.orderDetails.price = lowestAskWithSlippage;
 		this.orderDetails.amount = Number(balance.dividedBy(BigNumber(this.orderDetails.price)).minus(BigNumber(0.005)).round(2));
@@ -102,7 +102,7 @@ tradingagent.prototype.calculateOrder = function(result) {
 
 		var highestBidWithSlippage = Number(BigNumber(highestBid).times(BigNumber(1).minus(BigNumber(this.slippagePercentage).dividedBy(BigNumber(100)))).round(2));
 
-		logger.log('Highest Bid: ' + highestBid + ' Highest Bid With Slippage: ' + highestBidWithSlippage);
+		this.logger.log('Highest Bid: ' + highestBid + ' Highest Bid With Slippage: ' + highestBidWithSlippage);
 
 		this.orderDetails.price = highestBidWithSlippage;
 		this.orderDetails.amount = Number(BigNumber(this.orderDetails.assetBalance).minus(BigNumber(this.tradingReserveAsset)));
@@ -111,31 +111,31 @@ tradingagent.prototype.calculateOrder = function(result) {
 
 };
 
-tradingagent.prototype.placeRealOrder = function() {
+agent.prototype.placeRealOrder = function() {
 
 	if(this.orderDetails.amount <= 0) {
 
-		logger.log('Insufficient funds to place an order.');
+		this.logger.log('Insufficient funds to place an order.');
 
 	} else {
 
-		api.placeOrder(this.orderDetails.orderType, this.orderDetails.amount, this.orderDetails.price, true, this.processOrder);
+		this.exchangeapi.placeOrder(this.orderDetails.orderType, this.orderDetails.amount, this.orderDetails.price, true, this.processOrder);
 
 	}
 
 };
 
-tradingagent.prototype.placeSimulatedOrder = function() {
+agent.prototype.placeSimulatedOrder = function() {
 
 	if(this.orderDetails.amount <= 0) {
 
-		logger.log('Insufficient funds to place an order.');
+		this.logger.log('Insufficient funds to place an order.');
 
 	} else {
 
 		this.orderDetails.order = 'Simulated';
 
-		logger.log('Placed simulated ' + this.orderDetails.orderType + ' order: (' + this.orderDetails.amount + '@' + this.orderDetails.price + ')');
+		this.logger.log('Placed simulated ' + this.orderDetails.orderType + ' order: (' + this.orderDetails.amount + '@' + this.orderDetails.price + ')');
 
 		this.emit('simulatedOrder', this.orderDetails);
 
@@ -143,17 +143,17 @@ tradingagent.prototype.placeSimulatedOrder = function() {
 
 };
 
-tradingagent.prototype.processOrder = function(err, order) {
+agent.prototype.processOrder = function(err, order) {
 
 	if(!order) {
 
-		logger.log('Something went wrong when placing the ' + this.orderDetails.orderType + ' order.');
+		this.logger.log('Something went wrong when placing the ' + this.orderDetails.orderType + ' order.');
 
 	} else {
 
 		this.orderDetails.order = order.txid;
 
-		logger.log('Placed ' + this.orderDetails.orderType + ' order: ' + this.orderDetails.order + ' (' + this.orderDetails.amount + '@' + this.orderDetails.price + ')');
+		this.logger.log('Placed ' + this.orderDetails.orderType + ' order: ' + this.orderDetails.order + ' (' + this.orderDetails.amount + '@' + this.orderDetails.price + ')');
 
 		this.emit('realOrder', this.orderDetails);
 
@@ -161,4 +161,4 @@ tradingagent.prototype.processOrder = function(err, order) {
 
 };
 
-module.exports = tradingagent;
+module.exports = agent;

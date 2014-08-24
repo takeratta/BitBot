@@ -1,17 +1,17 @@
 {
   "name": "BitBot",
-  "version": "0.7.9",
+  "version": "0.8.0",
   "description": "Crypto-Currency Trading Bot",
   "main": "app.js",
   "dependencies": {
-    "async": "0.2.9",
+    "async": "0.9.0",
     "bignumber.js": "1.2.1",
-    "bitstamp": "0.1.5",
+    "bitstamp-api": "0.1.1",
     "mime": "1.2.11",
     "moment": "2.4.0",
-    "mongojs": "0.13.1",
+    "mongojs": "0.14.0",
     "pushover-notifications": "0.1.5",
-    "underscore": "1.5.2",
+    "underscore": "1.6.0",
     "ws": "0.4.31",
     "kraken-api": "0.1.5"
   },

@@ -1,12 +1,12 @@
 var _ = require('underscore');
 var async = require('async');
-var logger = require('./loggingservice.js');
-var api = require('./api.js');
 
-var downloader = function(refreshInterval){
+var downloader = function(refreshInterval, exchangeapi, logger){
 
   this.refreshInterval = refreshInterval;
   this.noTradesCount = 0;
+  this.exchangeapi = exchangeapi;
+  this.logger = logger;
 
   _.bindAll(this, 'start', 'stop', 'processTrades');
 
@@ -31,7 +31,7 @@ downloader.prototype.processTrades = function(err, trades) {
     this.noTradesCount += 1;
 
     if(this.noTradesCount >= 30) {
-      logger.error('Haven\'t received data from the API for 30 consecutive attempts, stopping application');
+      this.logger.error('Haven\'t received data from the Exchange API for 30 consecutive attempts, stopping application');
       return process.exit();
     }
 
@@ -41,12 +41,12 @@ downloader.prototype.processTrades = function(err, trades) {
 
 downloader.prototype.start = function() {
 
-  logger.log('Downloader started!');
+  this.logger.log('Downloader started!');
 
-  api.getTrades(false, this.processTrades);
+  this.exchangeapi.getTrades(false, this.processTrades);
 
   this.downloadInterval = setInterval(function(){
-    api.getTrades(false, this.processTrades);
+    this.exchangeapi.getTrades(false, this.processTrades);
   }.bind(this),1000 * this.refreshInterval);
 
 };
@@ -55,7 +55,7 @@ downloader.prototype.stop = function() {
 
   clearInterval(this.downloadInterval);
 
-  logger.log('Downloader stopped!');
+  this.logger.log('Downloader stopped!');
 
 };
 

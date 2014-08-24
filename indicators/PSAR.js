@@ -121,7 +121,7 @@ indicator.prototype.calculate = function(cs) {
     this.previousAF = this.options.AFIncrement;
     this.previousTrend = 1;
     this.firstCandleDone = true;
-    return 'hold';
+    return {advice: 'hold', indicatorValue: null};
   }
 
   limit = calculateLimit(this.previousTrend, this.csArray);
@@ -162,7 +162,7 @@ indicator.prototype.calculate = function(cs) {
   this.previousAF = AF;
   this.previousTrend = trend;
 
-  return advice;
+  return {advice: advice, indicatorValue: PSAR};
 
 };
 
