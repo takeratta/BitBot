@@ -1,12 +1,12 @@
 {
   "name": "BitBot",
-  "version": "0.8.1",
+  "version": "0.8.2",
   "description": "Crypto-Currency Trading Bot",
   "main": "app.js",
   "dependencies": {
     "async": "0.9.0",
     "bignumber.js": "1.2.1",
-    "bitstamp-api": "0.1.3",
+    "bitstamp-api": "0.1.5",
     "mime": "1.2.11",
     "moment": "2.4.0",
     "mongojs": "0.14.0",
