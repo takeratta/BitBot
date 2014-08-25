@@ -66,7 +66,7 @@ var endDate;
 
 //------------------------------AnnounceStart
 console.log('------------------------------------------');
-console.log('Starting BitBot Back-Tester v0.8.0');
+console.log('Starting BitBot Back-Tester v0.8.1');
 console.log('Working Dir = ' + process.cwd());
 console.log('------------------------------------------');
 //------------------------------AnnounceStart

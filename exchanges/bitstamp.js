@@ -164,7 +164,15 @@ exchange.prototype.placeOrder = function(caller, args, type, amount, price, retr
 
       if(!err) {
 
-        cb(null, {txid: result.id});
+        if(!result.error) {
+
+          cb(null, {txid: result.id});
+
+        } else {
+
+          cb(result.error, null);
+
+        }
 
       } else {
 

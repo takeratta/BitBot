@@ -44,7 +44,7 @@ pusher.prototype.send = function(title, message, sound, priority) {
       }
 
       this.logger.log('Push notification sent!');
-    });
+    }.bind(this));
 
   } else {
 

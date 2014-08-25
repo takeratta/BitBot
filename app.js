@@ -172,7 +172,7 @@ var start = function() {
 
   //------------------------------AnnounceStart
   console.log('------------------------------------------');
-  console.log('Starting BitBot v0.8.0');
+  console.log('Starting BitBot v0.8.1');
   console.log('Real Trading Enabled = ' + config.tradingEnabled);
   console.log('Working Dir = ' + process.cwd());
   console.log('------------------------------------------');

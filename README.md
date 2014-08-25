@@ -3,12 +3,12 @@ BitBot
 
 BitBot is a Crypto-Currency trading bot and backtesting platform that connects to popular Bitcoin exchanges (Bitstamp, Kraken). It is written in javascript and runs on [Node.JS](http://nodejs.org).
 
-# Dependencies
+## Dependencies
 
 - [Node.JS](http://nodejs.org)
 - [MongoDB](http://www.mongodb.org/)
 
-# Installation
+## Installation
 
 Make sure you have the latest Node.JS version and MongoDB installed.
 
@@ -18,7 +18,16 @@ Clone this repository to a folder of your liking and execute the following comma
 
 Pay close attention to the log messages of NPM (there shouldn't be any errors).
 
-# Configuration basics
+## Upgrading
+
+- Overwrite your files with the latest versions from this repository
+- Compare you config.js file with the config.sample.js file to make sure there aren't any extra settings available
+- Run the following command:
+
+
+	npm install
+
+## Configuration basics
 
 Copy the config.sample.js file and name it config.js.
 
@@ -62,7 +71,7 @@ By default you will see a lot of debugging information, once you are sure that y
 These are the minimum required settings you need to get the bot started.
 All other settings are user preference and should be pretty self explanatory.
 
-# Indicator and CandleStickSize settings
+## Indicator and CandleStickSize settings
 
 These settings aren't part of the configuration basics as they heavily depend on user preference.
 
@@ -125,7 +134,7 @@ As of version 0.7 BitBot now uses indicators as small plugins. You can create yo
 
 For examples on how to use this template, go have a look at one of the existing indicators in the indicators folder.
 
-# Usage
+## Usage
 
 Execute the following command in the folder where you installed BitBot:
 
@@ -137,12 +146,12 @@ If you would like to simulate trading on your collected data, execute:
 
 Remember the backtester simulates your trading strategy on the data you collected. So the longer you keep the bot (app.js) running, the more significant the results of the backtester.
 
-# Profitability
+## Profitability
 
 The provided trading algorithms are well known and documented on the internet (MADC, PPO). I do not guarantee you will make any profit when using this bot...
 For better results, consider writing your own algorithm and share it with the community in a pull request :-).
 
-# Donations
+## Donations
 
 If you enjoyed using BitBot or would like to help me continue development of this bot, consider buying me a beer:  
 (BTC) 1BitBotSYYMAsn6c1AsrxWphWAGkNE6hmQ
