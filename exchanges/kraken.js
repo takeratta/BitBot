@@ -16,11 +16,11 @@ var exchange = function(currencyPair, apiSettings, cbManager, logger) {
 };
 
 
-exchange.prototype.errorHandler = function(func, receivedArgs, retryAllowed, callerName, handler) {
+exchange.prototype.errorHandler = function(caller, receivedArgs, retryAllowed, callerName, handler) {
 
   return function(err, result) {
 
-    var cb = this.cbManager(func, receivedArgs, retryAllowed, handler);
+    var cb = this.cbManager(caller, receivedArgs, retryAllowed, handler);
 
     var parsedError = null;
 
@@ -290,9 +290,9 @@ exchange.prototype.cancelOrder = function(caller, args, order, retry, cb) {
 
   var wrapper = function() {
 
-    this.orderFilled(order, true, function(err, filled) {
+    this.orderFilled(caller, args, order, retry, function(err, filled) {
 
-      if(!filled) {
+      if(!filled && !err) {
 
         var handler = function(err, data) {
 
@@ -314,9 +314,13 @@ exchange.prototype.cancelOrder = function(caller, args, order, retry, cb) {
 
         this.kraken.api('CancelOrder', {"txid": order}, this.errorHandler(caller, args, retry, 'cancelOrder', handler));
 
-      } else {
+      } else if(filled && !err) {
 
         cb(null, false);
+
+      } else {
+
+        cb(err, null);
 
       }
 
