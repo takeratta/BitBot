@@ -1,13 +1,15 @@
 var _ = require('underscore');
 var Bitstamp = require('bitstamp-api');
 
-var exchange = function(currencyPair, apiSettings, cbManager, logger) {
+var exchange = function(currencyPair, apiSettings, cbManager, q, logger) {
 
   this.currencyPair = currencyPair;
 
   this.bitstamp = new Bitstamp(apiSettings.apiKey, apiSettings.secret, apiSettings.clientId);
 
   this.cbManager = cbManager;
+
+  this.q = q;
 
   this.logger = logger;
 
@@ -51,7 +53,9 @@ exchange.prototype.errorHandler = function(func, receivedArgs, retryAllowed, cal
 
 };
 
-exchange.prototype.getTrades = function(caller, args, retry, cb) {
+exchange.prototype.getTrades = function(retry, cb) {
+
+  var args = arguments;
 
   var wrapper = function() {
 
@@ -79,15 +83,17 @@ exchange.prototype.getTrades = function(caller, args, retry, cb) {
 
     };
 
-    this.bitstamp.transactions({time: 'hour'}, this.errorHandler(caller, args, retry, 'getTrades', handler));
+    this.bitstamp.transactions({time: 'hour'}, this.errorHandler(this.getTrades, args, retry, 'getTrades', handler));
 
   }.bind(this);
 
-  return wrapper;
+  this.q.push(wrapper);
 
 };
 
-exchange.prototype.getBalance = function(caller, args, retry, cb) {
+exchange.prototype.getBalance = function(retry, cb) {
+
+  var args = arguments;
 
   var wrapper = function() {
 
@@ -110,15 +116,17 @@ exchange.prototype.getBalance = function(caller, args, retry, cb) {
 
     };
 
-    this.bitstamp.balance(this.errorHandler(caller, args, retry, 'getBalance', handler));
+    this.bitstamp.balance(this.errorHandler(this.getBalance, args, retry, 'getBalance', handler));
 
   }.bind(this);
 
-  return wrapper;
+  this.q.push(wrapper);
 
 };
 
-exchange.prototype.getOrderBook = function(caller, args, retry, cb) {
+exchange.prototype.getOrderBook = function(retry, cb) {
+
+  var args = arguments;
 
   var wrapper = function () {
 
@@ -146,15 +154,17 @@ exchange.prototype.getOrderBook = function(caller, args, retry, cb) {
 
     };
 
-    this.bitstamp.order_book(1, this.errorHandler(caller, args, retry, 'getOrderBook', handler));
+    this.bitstamp.order_book(1, this.errorHandler(this.getOrderBook, args, retry, 'getOrderBook', handler));
 
   }.bind(this);
 
-  return wrapper;
+  this.q.push(wrapper);
 
 };
 
-exchange.prototype.placeOrder = function(caller, args, type, amount, price, retry, cb) {
+exchange.prototype.placeOrder = function(type, amount, price, retry, cb) {
+
+  var args = arguments;
 
   var wrapper = function() {
 
@@ -184,11 +194,11 @@ exchange.prototype.placeOrder = function(caller, args, type, amount, price, retr
 
     if(type === 'buy') {
 
-      this.bitstamp.buy(amount, price, this.errorHandler(caller, args, retry, 'placeOrder', handler));
+      this.bitstamp.buy(amount, price, this.errorHandler(this.placeOrder, args, retry, 'placeOrder', handler));
 
     } else if (type === 'sell') {
 
-      this.bitstamp.sell(amount, price, this.errorHandler(caller, args, retry, 'placeOrder', handler));
+      this.bitstamp.sell(amount, price, this.errorHandler(this.placeOrder, args, retry, 'placeOrder', handler));
 
     } else {
 
@@ -198,11 +208,13 @@ exchange.prototype.placeOrder = function(caller, args, type, amount, price, retr
 
   }.bind(this);
 
-  return wrapper;
+  this.q.push(wrapper);
 
 };
 
-exchange.prototype.orderFilled = function(caller, args, order, retry, cb) {
+exchange.prototype.orderFilled = function(order, retry, cb) {
+
+  var args = arguments;
 
   var wrapper = function() {
 
@@ -234,15 +246,17 @@ exchange.prototype.orderFilled = function(caller, args, order, retry, cb) {
 
     };
 
-    this.bitstamp.open_orders(this.errorHandler(caller, args, retry, 'orderFilled', handler));
+    this.bitstamp.open_orders(this.errorHandler(this.orderFilled, args, retry, 'orderFilled', handler));
 
   }.bind(this);
 
-  return wrapper;
+  this.q.push(wrapper);
 
 };
 
-exchange.prototype.cancelOrder = function(caller, args, order, retry, cb) {
+exchange.prototype.cancelOrder = function(order, retry, cb) {
+
+  var args = arguments;
 
   var wrapper = function() {
 
@@ -264,11 +278,11 @@ exchange.prototype.cancelOrder = function(caller, args, order, retry, cb) {
 
     };
 
-    this.bitstamp.cancel_order(order,this.errorHandler(caller, args, retry, 'cancelOrder', handler));
+    this.bitstamp.cancel_order(order,this.errorHandler(this.cancelOrder, args, retry, 'cancelOrder', handler));
 
   }.bind(this);
 
-  return wrapper;
+  this.q.push(wrapper);
 
 };
 

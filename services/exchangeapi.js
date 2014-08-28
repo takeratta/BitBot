@@ -8,19 +8,19 @@ var api = function(exchangeSettings, apiSettings, logger) {
   this.currencyPair = exchangeSettings.currencyPair;
   this.logger = logger;
 
+  this.q = async.queue(function (task, callback) {
+    task();
+    setTimeout(callback,1000);
+  }, 1);
+
   if(fs.existsSync('./exchanges/' + this.exchange + '.js')) {
     var Exchange = require('../exchanges/' + this.exchange + '.js');
-    this.selectedExchange = new Exchange(this.currencyPair, apiSettings[this.exchange], this.cbManager.bind(this), logger);
+    this.selectedExchange = new Exchange(this.currencyPair, apiSettings[this.exchange], this.cbManager.bind(this), this.q, logger);
   } else {
     var err = new Error('Wrong exchange chosen. This exchange doesn\'t exist.');
     this.logger.error(err.stack);
     process.exit();
   }
-
-  this.q = async.queue(function (task, callback) {
-    task();
-    setTimeout(callback,1000);
-  }, 1);
 
   _.bindAll(this, 'retry', 'cbManager', 'getTrades', 'getBalance', 'getOrderBook', 'placeOrder', 'orderFilled' ,'cancelOrder');
 
@@ -74,61 +74,37 @@ api.prototype.cbManager = function(method, receivedArgs, retryAllowed, cb) {
 
 api.prototype.getTrades = function(retry, cb) {
 
-  var args = arguments;
-
-  var wrapper = this.selectedExchange.getTrades(this.getTrades, args, retry, cb);
-
-  this.q.push(wrapper);
+  this.selectedExchange.getTrades(retry, cb);
 
 };
 
 api.prototype.getBalance = function(retry, cb) {
 
-  var args = arguments;
-
-  var wrapper = this.selectedExchange.getBalance(this.getBalance, args, retry, cb);
-
-  this.q.push(wrapper);
+  this.selectedExchange.getBalance(retry, cb);
 
 };
 
 api.prototype.getOrderBook = function(retry, cb) {
 
-  var args = arguments;
-
-  var wrapper = this.selectedExchange.getOrderBook(this.getOrderBook, args, retry, cb);
-
-  this.q.push(wrapper);
+  this.selectedExchange.getOrderBook(retry, cb);
 
 };
 
 api.prototype.placeOrder = function(type, amount, price, retry, cb) {
 
-  var args = arguments;
-
-  var wrapper = this.selectedExchange.placeOrder(this.placeOrder, args, type, amount, price, retry, cb);
-
-  this.q.push(wrapper);
+  this.selectedExchange.placeOrder(type, amount, price, retry, cb);
 
 };
 
 api.prototype.orderFilled = function(order, retry, cb) {
 
-  var args = arguments;
-
-  var wrapper = this.selectedExchange.orderFilled(this.orderFilled, args, order, retry, cb);
-
-  this.q.push(wrapper);
+  this.selectedExchange.orderFilled(order, retry, cb);
 
 };
 
 api.prototype.cancelOrder = function(order, retry, cb) {
 
-  var args = arguments;
-
-  var wrapper = this.selectedExchange.cancelOrder(this.cancelOrder, args, order, retry, cb);
-
-  this.q.push(wrapper);
+  this.selectedExchange.cancelOrder(order, retry, cb);
 
 };
 
