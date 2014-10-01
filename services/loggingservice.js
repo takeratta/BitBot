@@ -1,9 +1,42 @@
 var moment = require('moment');
 var _ = require('underscore');
+var winston = require('winston');
+var fs = require('fs');
 
 var logger = function(debug) {
 
   this.debugEnabled = debug;
+
+  if (!fs.existsSync('logs')) {
+    fs.mkdirSync('logs');
+  }
+
+  var myCustomLevels = {
+    levels: {
+      DEBUG: 0,
+      INFO: 1,
+      ERROR: 2
+    }
+  };
+
+  var now = function() {
+    var format = moment(new Date()).format('DD-MM-YYYY HH:mm:ss');
+    return '[' + format + ']';
+  };
+
+  this.logger = new (winston.Logger)({
+    levels: myCustomLevels.levels,
+    transports: [
+      new (winston.transports.Console)({
+        'timestamp': now,
+        level: 'INFO' }),
+      new (winston.transports.DailyRotateFile)({
+        'timestamp': now,
+        datePattern: '_dd-MM-yyyy.log',
+        filename: 'logs/debug',
+        level: 'DEBUG'})
+    ]
+  });
 
   _.bindAll(this, 'log', 'debug', 'error');
 
@@ -11,9 +44,7 @@ var logger = function(debug) {
 
 logger.prototype.log = function(message) {
 
-  var now = moment(new Date()).format('DD-MM-YYYY HH:mm:ss');
-
-  console.log('[' + now + '] (INFO) ' + message);
+  this.logger.log('INFO', message);
 
 };
 
@@ -21,9 +52,7 @@ logger.prototype.debug = function(message) {
 
   if(this.debugEnabled) {
 
-    var now = moment(new Date()).format('DD-MM-YYYY HH:mm:ss');
-
-    console.log('[' + now + '] (DEBUG) ' + message);
+    this.logger.log('DEBUG', message);
 
   }
 
@@ -31,9 +60,7 @@ logger.prototype.debug = function(message) {
 
 logger.prototype.error = function(message) {
 
-  var now = moment(new Date()).format('DD-MM-YYYY HH:mm:ss');
-
-  console.log('[' + now + '] (ERROR) ' + message);
+  this.logger.log('ERROR', message);
 
 };
 

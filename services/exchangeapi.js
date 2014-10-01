@@ -1,5 +1,4 @@
 var _ = require('underscore');
-var async = require('async');
 var fs = require('fs');
 
 var api = function(exchangeSettings, apiSettings, logger) {
@@ -8,67 +7,16 @@ var api = function(exchangeSettings, apiSettings, logger) {
   this.currencyPair = exchangeSettings.currencyPair;
   this.logger = logger;
 
-  this.q = async.queue(function (task, callback) {
-    task();
-    setTimeout(callback,1000);
-  }, 1);
-
   if(fs.existsSync('./exchanges/' + this.exchange + '.js')) {
     var Exchange = require('../exchanges/' + this.exchange + '.js');
-    this.selectedExchange = new Exchange(this.currencyPair, apiSettings[this.exchange], this.cbManager.bind(this), this.q, logger);
+    this.selectedExchange = new Exchange(this.currencyPair, apiSettings[this.exchange], logger);
   } else {
     var err = new Error('Wrong exchange chosen. This exchange doesn\'t exist.');
     this.logger.error(err.stack);
     process.exit();
   }
 
-  _.bindAll(this, 'retry', 'cbManager', 'getTrades', 'getBalance', 'getOrderBook', 'placeOrder', 'orderFilled' ,'cancelOrder');
-
-};
-
-api.prototype.retry = function(method, args) {
-
-  var self = this;
-
-  // make sure the callback (and any other fn)
-  // is bound to api
-  _.each(args, function(arg, i) {
-    if(_.isFunction(arg))
-      args[i] = _.bind(arg, self);
-  });
-
-  // run the failed method again with the same
-  // arguments after wait
-
-  setTimeout(function() { method.apply(self, args); }, 1000*15);
-
-};
-
-api.prototype.cbManager = function(method, receivedArgs, retryAllowed, cb) {
-
-  var args = _.toArray(receivedArgs);
-
-  return function(err, result) {
-
-    if(err) {
-
-      if(retryAllowed) {
-
-        return this.retry(method, args);
-
-      } else {
-
-        return cb(err, null);
-
-      }
-
-    } else {
-
-      cb(null, result);
-
-    }
-
-  }.bind(this);
+  _.bindAll(this, 'getTrades', 'getBalance', 'getOrderBook', 'placeOrder', 'orderFilled' ,'cancelOrder');
 
 };
 

@@ -1,27 +1,49 @@
 var _ = require('underscore');
+var async = require('async');
 var Bitstamp = require('bitstamp-api');
 
-var exchange = function(currencyPair, apiSettings, cbManager, q, logger) {
+var exchange = function(currencyPair, apiSettings, logger) {
 
   this.currencyPair = currencyPair;
 
   this.bitstamp = new Bitstamp(apiSettings.apiKey, apiSettings.secret, apiSettings.clientId);
 
-  this.cbManager = cbManager;
-
-  this.q = q;
+  this.q = async.queue(function (task, callback) {
+    this.logger.debug('Added ' + task.name + ' API call to the queue.');
+    this.logger.debug('There are currently ' + this.q.running() + ' running jobs and ' + this.q.length() + ' jobs in queue.');
+    task.func();
+    setTimeout(callback,1000);
+  }.bind(this), 1);
 
   this.logger = logger;
 
-  _.bindAll(this, 'errorHandler', 'getTrades', 'getBalance', 'getOrderBook', 'placeOrder', 'orderFilled' ,'cancelOrder');
+  _.bindAll(this, 'retry', 'errorHandler', 'getTrades', 'getBalance', 'getOrderBook', 'placeOrder', 'orderFilled' ,'cancelOrder');
 
 };
 
-exchange.prototype.errorHandler = function(func, receivedArgs, retryAllowed, callerName, handler) {
+exchange.prototype.retry = function(method, args) {
+
+  var self = this;
+
+  // make sure the callback (and any other fn)
+  // is bound to api
+  _.each(args, function(arg, i) {
+    if(_.isFunction(arg))
+      args[i] = _.bind(arg, self);
+  });
+
+  // run the failed method again with the same
+  // arguments after wait
+
+  setTimeout(function() { method.apply(self, args); }, 1000*15);
+
+};
+
+exchange.prototype.errorHandler = function(caller, receivedArgs, retryAllowed, callerName, handler) {
 
   return function(err, result) {
 
-    var cb = this.cbManager(func, receivedArgs, retryAllowed, handler);
+    var args = _.toArray(receivedArgs);
 
     var parsedError = null;
 
@@ -38,6 +60,7 @@ exchange.prototype.errorHandler = function(func, receivedArgs, retryAllowed, cal
 
       if(retryAllowed) {
         this.logger.error('Retrying in 15 seconds!');
+        return this.retry(caller, args);
       }
 
     } else {
@@ -47,7 +70,7 @@ exchange.prototype.errorHandler = function(func, receivedArgs, retryAllowed, cal
 
     }
 
-    cb(parsedError, result);
+    handler(parsedError, result);
 
   }.bind(this);
 
@@ -87,7 +110,7 @@ exchange.prototype.getTrades = function(retry, cb) {
 
   }.bind(this);
 
-  this.q.push(wrapper);
+  this.q.push({name: 'getTrades', func: wrapper});
 
 };
 
@@ -120,7 +143,7 @@ exchange.prototype.getBalance = function(retry, cb) {
 
   }.bind(this);
 
-  this.q.push(wrapper);
+  this.q.push({name: 'getBalance', func: wrapper});
 
 };
 
@@ -158,7 +181,7 @@ exchange.prototype.getOrderBook = function(retry, cb) {
 
   }.bind(this);
 
-  this.q.push(wrapper);
+  this.q.push({name: 'getOrderBook', func: wrapper});
 
 };
 
@@ -208,7 +231,7 @@ exchange.prototype.placeOrder = function(type, amount, price, retry, cb) {
 
   }.bind(this);
 
-  this.q.push(wrapper);
+  this.q.push({name: 'placeOrder', func: wrapper});
 
 };
 
@@ -250,7 +273,7 @@ exchange.prototype.orderFilled = function(order, retry, cb) {
 
   }.bind(this);
 
-  this.q.push(wrapper);
+  this.q.push({name: 'orderFilled', func: wrapper});
 
 };
 
@@ -282,7 +305,7 @@ exchange.prototype.cancelOrder = function(order, retry, cb) {
 
   }.bind(this);
 
-  this.q.push(wrapper);
+  this.q.push({name: 'cancelOrder', func: wrapper});
 
 };
 

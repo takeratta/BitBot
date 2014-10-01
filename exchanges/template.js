@@ -4,26 +4,50 @@ process.exit();
 //-------------------- REMOVE THIS BLOCK
 
 var _ = require('underscore');
+var async = require('async');
 
-var exchange = function(currencyPair, apiSettings, cbManager, logger) {
+var exchange = function(currencyPair, apiSettings, logger) {
 
   this.currencyPair = currencyPair;
 
   // intialize your API with it's apiSettings here
 
-  this.cbManager = cbManager;
+  this.q = async.queue(function (task, callback) {
+    this.logger.debug('Added ' + task.name + ' API call to the queue.');
+    this.logger.debug('There are currently ' + this.q.running() + ' running jobs and ' + this.q.length() + ' jobs in queue.');
+    task.func();
+    setTimeout(callback,1000);
+  }.bind(this), 1);
 
   this.logger = logger;
 
-  _.bindAll(this, 'errorHandler', 'getTrades', 'getBalance', 'getOrderBook', 'placeOrder', 'orderFilled' ,'cancelOrder');
+  _.bindAll(this, 'retry', 'errorHandler', 'getTrades', 'getBalance', 'getOrderBook', 'placeOrder', 'orderFilled' ,'cancelOrder');
 
 };
 
-exchange.prototype.errorHandler = function(func, receivedArgs, retryAllowed, callerName, handler) {
+exchange.prototype.retry = function(method, args) {
+
+  var self = this;
+
+  // make sure the callback (and any other fn)
+  // is bound to api
+  _.each(args, function(arg, i) {
+    if(_.isFunction(arg))
+      args[i] = _.bind(arg, self);
+  });
+
+  // run the failed method again with the same
+  // arguments after wait
+
+  setTimeout(function() { method.apply(self, args); }, 1000*15);
+
+};
+
+exchange.prototype.errorHandler = function(caller, receivedArgs, retryAllowed, callerName, handler) {
 
   return function(err, result) {
 
-    var cb = this.cbManager(func, receivedArgs, retryAllowed, callerName, handler);
+    var args = _.toArray(receivedArgs);
 
     var parsedError = null;
 
@@ -40,6 +64,7 @@ exchange.prototype.errorHandler = function(func, receivedArgs, retryAllowed, cal
 
       if(retryAllowed) {
         this.logger.error('Retrying in 15 seconds!');
+        return this.retry(caller, args);
       }
 
     } else {
@@ -49,13 +74,13 @@ exchange.prototype.errorHandler = function(func, receivedArgs, retryAllowed, cal
 
     }
 
-    cb(parsedError, result);
+    handler(parsedError, result);
 
   }.bind(this);
 
 };
 
-exchange.prototype.getTrades = function(caller, retry, cb) {
+exchange.prototype.getTrades = function(retry, cb) {
 
   var args = arguments;
 
@@ -68,15 +93,15 @@ exchange.prototype.getTrades = function(caller, retry, cb) {
     };
 
     // Pass this as callback to your exchange function (Expects an Err, Result output).
-    this.errorHandler(caller, args, retry, 'getTrades', handler);
+    this.errorHandler(this.getTrades, args, retry, 'getTrades', handler);
 
   }.bind(this);
 
-  return wrapper;
+  this.q.push({name: 'getTrades', func: wrapper});
 
 };
 
-exchange.prototype.getBalance = function(caller, retry, cb) {
+exchange.prototype.getBalance = function(retry, cb) {
 
   var args = arguments;
 
@@ -89,15 +114,15 @@ exchange.prototype.getBalance = function(caller, retry, cb) {
     };
 
     // Pass this as callback to your exchange function (Expects an Err, Result output).
-    this.errorHandler(caller, args, retry, 'getBalance', handler);
+    this.errorHandler(this.getBalance, args, retry, 'getBalance', handler);
 
   }.bind(this);
 
-  return wrapper;
+  this.q.push({name: 'getBalance', func: wrapper});
 
 };
 
-exchange.prototype.getOrderBook = function(caller, retry, cb) {
+exchange.prototype.getOrderBook = function(retry, cb) {
 
   var args = arguments;
 
@@ -110,15 +135,15 @@ exchange.prototype.getOrderBook = function(caller, retry, cb) {
     };
 
     // Pass this as callback to your exchange function (Expects an Err, Result output).
-    this.errorHandler(caller, args, retry, 'getOrderBook', handler);
+    this.errorHandler(this.getOrderBook, args, retry, 'getOrderBook', handler);
 
   }.bind(this);
 
-  return wrapper;
+  this.q.push({name: 'getOrderBook', func: wrapper});
 
 };
 
-exchange.prototype.placeOrder = function(caller, type, amount, price, retry, cb) {
+exchange.prototype.placeOrder = function(type, amount, price, retry, cb) {
 
   var args = arguments;
 
@@ -131,15 +156,15 @@ exchange.prototype.placeOrder = function(caller, type, amount, price, retry, cb)
     };
 
     // Pass this as callback to your exchange function (Expects an Err, Result output).
-    this.errorHandler(caller, args, retry, 'placeOrder', handler);
+    this.errorHandler(this.placeOrder, args, retry, 'placeOrder', handler);
 
   }.bind(this);
 
-  return wrapper;
+  this.q.push({name: 'placeOrder', func: wrapper});
 
 };
 
-exchange.prototype.orderFilled = function(caller, order, retry, cb) {
+exchange.prototype.orderFilled = function(order, retry, cb) {
 
   var args = arguments;
 
@@ -152,15 +177,15 @@ exchange.prototype.orderFilled = function(caller, order, retry, cb) {
     };
 
     // Pass this as callback to your exchange function (Expects an Err, Result output).
-    this.errorHandler(caller, args, retry, 'orderFilled', handler);
+    this.errorHandler(this.orderFilled, args, retry, 'orderFilled', handler);
 
   }.bind(this);
 
-  return wrapper;
+  this.q.push({name: 'orderFilled', func: wrapper});
 
 };
 
-exchange.prototype.cancelOrder = function(caller, order, retry, cb) {
+exchange.prototype.cancelOrder = function(order, retry, cb) {
 
   var args = arguments;
 
@@ -173,11 +198,11 @@ exchange.prototype.cancelOrder = function(caller, order, retry, cb) {
     };
 
     // Pass this as callback to your exchange function (Expects an Err, Result output).
-    this.errorHandler(caller, args, retry, 'cancelOrder', handler);
+    this.errorHandler(this.cancelOrder, args, retry, 'cancelOrder', handler);
 
   }.bind(this);
 
-  return wrapper;
+  this.q.push({name: 'cancelOrder', func: wrapper});
 
 };
 

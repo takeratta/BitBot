@@ -160,7 +160,7 @@ processor.prototype.processInitialLoad = function(err, result) {
 
   if(err) {
 
-    var parsedError = err;
+    var parsedError = JSON.stringify(err);
 
     if(err.stack) {
       parsedError = err.stack;
@@ -185,7 +185,7 @@ processor.prototype.processUpdate = function(err, result) {
 
   if(err) {
 
-    var parsedError = err;
+    var parsedError = JSON.stringify(err);
 
     if(err.stack) {
       parsedError = err.stack;
