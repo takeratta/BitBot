@@ -1,5 +1,5 @@
 var _ = require('underscore');
-var BigNumber = require('bignumber.js');
+var tools = require('../util/tools.js');
 
 var indicator = function(options) {
 
@@ -24,10 +24,10 @@ var calculateEma = function(periods, priceToday, previousEma) {
     previousEma = priceToday;
   }
 
-  var k = BigNumber(2).dividedBy(BigNumber(periods+1));
-  var ema = (BigNumber(priceToday).times(k)).plus(BigNumber(previousEma).times(BigNumber(1).minus(k)));
+  var k = 2 / (periods + 1);
+  var ema = (priceToday * k) + (previousEma * (1 - k));
 
-  return BigNumber(ema).round(8);
+  return ema;
 
 };
 //-------------------------------------------------------------------------------HelperFunctions
@@ -39,12 +39,12 @@ indicator.prototype.calculate = function(cs) {
 
   var usePrice = cs.close;
 
-  var emaLong = Number(calculateEma(this.options.longPeriods, usePrice, this.previousIndicator.emaLong));
-  var emaShort = Number(calculateEma(this.options.shortPeriods, usePrice, this.previousIndicator.emaShort));
+  var emaLong = calculateEma(this.options.longPeriods, usePrice, this.previousIndicator.emaLong);
+  var emaShort = calculateEma(this.options.shortPeriods, usePrice, this.previousIndicator.emaShort);
 
-  var PPO = Number(BigNumber(emaShort).minus(BigNumber(emaLong)).dividedBy(BigNumber(emaLong)).times(BigNumber(100)).round(8));
-  var PPOSignal = Number(calculateEma(this.options.emaPeriods, PPO, this.previousIndicator.PPOSignal));
-  var PPOHistogram = Number(BigNumber(PPO).minus(BigNumber(PPOSignal)).round(2));
+  var PPO = ((emaShort - emaLong) / emaLong) * 100;
+  var PPOSignal = calculateEma(this.options.emaPeriods, PPO, this.previousIndicator.PPOSignal);
+  var PPOHistogram = tools.round(PPO - PPOSignal, 2);
 
   this.indicator = {'emaLong': emaLong, 'emaShort': emaShort, 'PPO': PPO, 'PPOSignal': PPOSignal, 'result': PPOHistogram};
 

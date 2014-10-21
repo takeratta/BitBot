@@ -4,7 +4,7 @@ process.exit();
 //-------------------- REMOVE THIS BLOCK
 
 var _ = require('underscore');
-var BigNumber = require('bignumber.js');
+var tools = require('../util/tools.js');
 
 var indicator = function(options) {
 

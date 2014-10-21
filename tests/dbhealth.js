@@ -2,18 +2,14 @@ var _ = require('underscore');
 var config = require('../config.js');
 var loggingservice = require('../services/loggingservice.js');
 
-var database = require('../services/db.js');
-var candlestorage = require('../services/candlestorage.js');
+var storageservice = require('../services/storage.js');
 var dataprocessor = require('../services/dataprocessor.js');
 
-var logger = new loggingservice(config.debug);
-var db = new database(config.exchangeSettings, config.mongoConnectionString, logger);
-var storage = new candlestorage(db, logger);
+var logger = new loggingservice('dbHealthTest', config.debug);
+var storage = new storageservice(config.exchangeSettings, config.mongoConnectionString, logger);
 var processor = new dataprocessor(storage, logger);
 
-processor.on('initialized', function(){
-
-  var loopArray = storage.getAllCandlesSince();
+storage.getAllCandlesSince(0, function(err, loopArray) {
 
   var testPeriod = _.first(loopArray).period - 60;
   var success = true;
@@ -41,5 +37,3 @@ processor.on('initialized', function(){
   }
 
 });
-
-processor.initialize();

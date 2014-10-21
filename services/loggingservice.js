@@ -3,7 +3,7 @@ var _ = require('underscore');
 var winston = require('winston');
 var fs = require('fs');
 
-var logger = function(debug) {
+var logger = function(app, debug) {
 
   this.debugEnabled = debug;
 
@@ -33,7 +33,7 @@ var logger = function(debug) {
       new (winston.transports.DailyRotateFile)({
         'timestamp': now,
         datePattern: '_dd-MM-yyyy.log',
-        filename: 'logs/debug',
+        filename: 'logs/' + app,
         level: 'DEBUG'})
     ]
   });

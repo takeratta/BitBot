@@ -6,7 +6,7 @@ var exchangeapiservice = require('../services/exchangeapi.js');
 var loggingservice = require('../services/loggingservice.js');
 var _ = require('underscore');
 
-var logger = new loggingservice(config.debug);
+var logger = new loggingservice('cancelOrderTest', config.debug);
 var api = new exchangeapiservice(config.exchangeSettings, config.apiSettings, logger);
 
 api.getBalance(true, function(err, result) {

@@ -1,5 +1,5 @@
 var _ = require('underscore');
-var BigNumber = require('bignumber.js');
+var tools = require('../util/tools.js');
 
 var indicator = function(options) {
 
@@ -24,10 +24,10 @@ var calculateEma = function(periods, priceToday, previousEma) {
     previousEma = priceToday;
   }
 
-  var k = BigNumber(2).dividedBy(BigNumber(periods+1));
-  var ema = (BigNumber(priceToday).times(k)).plus(BigNumber(previousEma).times(BigNumber(1).minus(k)));
+  var k = 2 / (periods + 1);
+  var ema = (priceToday * k) + (previousEma * (1 - k));
 
-  return BigNumber(ema).round(8);
+  return ema;
 
 };
 //-------------------------------------------------------------------------------HelperFunctions
@@ -39,12 +39,12 @@ indicator.prototype.calculate = function(cs) {
 
   var usePrice = cs.close;
 
-  var emaLong = Number(calculateEma(this.options.longPeriods, usePrice, this.previousIndicator.emaLong));
-  var emaShort = Number(calculateEma(this.options.shortPeriods, usePrice, this.previousIndicator.emaShort));
+  var emaLong = calculateEma(this.options.longPeriods, usePrice, this.previousIndicator.emaLong);
+  var emaShort = calculateEma(this.options.shortPeriods, usePrice, this.previousIndicator.emaShort);
 
-  var macd = Number(BigNumber(emaShort).minus(BigNumber(emaLong)));
-  var macdSignal = Number(calculateEma(this.options.emaPeriods, macd, this.previousIndicator.macdSignal));
-  var macdHistogram = Number(BigNumber(macd).minus(BigNumber(macdSignal)).round(2));
+  var macd = emaShort - emaLong;
+  var macdSignal = calculateEma(this.options.emaPeriods, macd, this.previousIndicator.macdSignal);
+  var macdHistogram = tools.round(macd - macdSignal, 2);
 
   this.indicator = {'emaLong': emaLong, 'emaShort': emaShort, 'macd': macd, 'macdSignal': macdSignal, 'result': macdHistogram};
 

@@ -87,7 +87,7 @@ As of version 0.7 BitBot now uses indicators as small plugins. You can create yo
 	//-------------------- REMOVE THIS BLOCK
 
 	var _ = require('underscore');
-	var BigNumber = require('bignumber.js');
+	var tools = require('../util/tools.js');
 
 	var indicator = function(options) {
 

@@ -1,5 +1,5 @@
 var _ = require('underscore');
-var BigNumber = require('bignumber.js');
+var tools = require('../util/tools.js');
 var async = require('async');
 
 var agent = function(tradingEnabled, exchangeSettings, storage, exchangeapi, logger) {
@@ -45,7 +45,8 @@ agent.prototype.order = function(orderType) {
 	async.series(
 		{
 			balance: function(cb) {this.exchangeapi.getBalance(true, cb);}.bind(this),
-			orderBook: function(cb) {this.exchangeapi.getOrderBook(true, cb);}.bind(this)
+			orderBook: function(cb) {this.exchangeapi.getOrderBook(true, cb);}.bind(this),
+			lastClose: function(cb) {this.storage.getLastClose(cb);}.bind(this)
 		},
 		process.bind(this)
 	);
@@ -60,9 +61,9 @@ agent.prototype.calculateOrder = function(result) {
 
 	var orderBook = result.orderBook;
 
-	var lastClose = this.storage.getLastClose();
-	var minClose = Number(BigNumber(lastClose).times(BigNumber(0.9975)).round(2));
-	var maxClose = Number(BigNumber(lastClose).times(BigNumber(1.0025)).round(2));
+	var lastClose = result.lastClose;
+	var minClose = tools.round(lastClose * 0.9975, 2);
+	var maxClose = tools.round(lastClose * 1.0025, 2);
 
 	this.logger.log('Preparing to place a ' + this.orderDetails.orderType + ' order! (' + this.currencyPair.asset + ' Balance: ' + this.orderDetails.assetBalance + ' ' + this.currencyPair.currency + ' Balance: ' + this.orderDetails.currencyBalance + ' Trading Fee: ' + this.orderDetails.tradingFee +')');
 
@@ -79,13 +80,13 @@ agent.prototype.calculateOrder = function(result) {
 
 		var lowestAsk = lastClose;
 
-		var lowestAskWithSlippage = Number(BigNumber(lowestAsk).times(BigNumber(1).plus(BigNumber(this.slippagePercentage).dividedBy(BigNumber(100)))).round(2));
-		var balance = (BigNumber(this.orderDetails.currencyBalance).minus(BigNumber(this.tradingReserveCurrency))).times(BigNumber(1).minus(BigNumber(this.orderDetails.tradingFee).dividedBy(BigNumber(100))));
+		var lowestAskWithSlippage = tools.round(lowestAsk * (1 + (this.slippagePercentage / 100)), 2);
+		var balance = (this.orderDetails.currencyBalance - this.tradingReserveCurrency) * (1 - (this.orderDetails.tradingFee / 100));
 
 		this.logger.log('Lowest Ask: ' + lowestAsk + ' Lowest Ask With Slippage: ' + lowestAskWithSlippage);
 
 		this.orderDetails.price = lowestAskWithSlippage;
-		this.orderDetails.amount = Number(balance.dividedBy(BigNumber(this.orderDetails.price)).minus(BigNumber(0.005)).round(2));
+		this.orderDetails.amount = tools.round((balance / this.orderDetails.price) - 0.005, 2);
 
 	} else if(this.orderDetails.orderType === 'sell') {
 
@@ -100,12 +101,12 @@ agent.prototype.calculateOrder = function(result) {
 
 		var highestBid = lastClose;
 
-		var highestBidWithSlippage = Number(BigNumber(highestBid).times(BigNumber(1).minus(BigNumber(this.slippagePercentage).dividedBy(BigNumber(100)))).round(2));
+		var highestBidWithSlippage = tools.round(highestBid * (1 - (this.slippagePercentage / 100)), 2);
 
 		this.logger.log('Highest Bid: ' + highestBid + ' Highest Bid With Slippage: ' + highestBidWithSlippage);
 
 		this.orderDetails.price = highestBidWithSlippage;
-		this.orderDetails.amount = Number(BigNumber(this.orderDetails.assetBalance).minus(BigNumber(this.tradingReserveAsset)));
+		this.orderDetails.amount = tools.round(this.orderDetails.assetBalance - this.tradingReserveAsset, 2);
 
 	}
 

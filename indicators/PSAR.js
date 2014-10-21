@@ -1,5 +1,5 @@
 var _ = require('underscore');
-var BigNumber = require('bignumber.js');
+var tools = require('../util/tools.js');
 
 var indicator = function(options) {
 
@@ -23,10 +23,10 @@ var calculatePSAR = function(previousPSAR, previousEP, previousAF, previousTrend
   var temp;
 
   if(previousTrend === 1) {
-    temp = Number(BigNumber(previousPSAR).plus(BigNumber(previousAF).times(BigNumber(previousEP).minus(BigNumber(previousPSAR)))).round(2));
+    temp = tools.round(previousPSAR + (previousAF * (previousEP - previousPSAR)), 2);
     PSAR = _.min([temp, limit]);
   } else if (previousTrend === -1) {
-    temp = Number(BigNumber(previousPSAR).minus(BigNumber(previousAF).times(BigNumber(previousPSAR).minus(BigNumber(previousEP)))).round(2));
+    temp = tools.round(previousPSAR - (previousAF * (previousPSAR - previousEP)), 2);
     PSAR = _.max([temp,limit]);
   }
 
@@ -93,7 +93,7 @@ var calculateAF = function(EP, previousEP, trend, previousTrend, previousAF, AFI
   if(EP !== previousEP) {EPChanged = true;}
 
   if(EPChanged && trend === previousTrend && previousAF < maximumAF) {
-    AF = Number(BigNumber(previousAF).plus(BigNumber(AFIncrement)).round(2));
+    AF = tools.round(previousAF + AFIncrement, 2);
   } else if (trend !== previousTrend) {
     AF = AFIncrement;
   } else {
@@ -116,8 +116,8 @@ indicator.prototype.calculate = function(cs) {
   }
 
   if(!this.firstCandleDone) {
-    this.previousPSAR = Number(BigNumber(cs.low).round(2));
-    this.previousEP = Number(BigNumber(cs.high).round(2));
+    this.previousPSAR = tools.round(cs.low, 2);
+    this.previousEP = tools.round(cs.high, 2);
     this.previousAF = this.options.AFIncrement;
     this.previousTrend = 1;
     this.firstCandleDone = true;

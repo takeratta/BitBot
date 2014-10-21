@@ -1,5 +1,4 @@
 var _ = require('underscore');
-var BigNumber = require('bignumber.js');
 
 var monitor = function(exchangeapi, logger) {
 

@@ -1,5 +1,5 @@
 var _ = require('underscore');
-var BigNumber = require('bignumber.js');
+var tools = require('../util/tools.js');
 
 var monitor = function(slPercentageB, slPercentageS, candleStickSizeMinutes, storage, logger) {
 
@@ -55,49 +55,60 @@ monitor.prototype.setPosition = function(pos, price) {
 
     this.position = 'bought';
     this.posPrice = price;
-    this.checkPriceBought = Number(BigNumber(this.posPrice).times(BigNumber(1).minus(BigNumber(this.percentageBought).dividedBy(BigNumber(100)))));
+    this.checkPriceBought = this.posPrice * (1 - (this.percentageBought / 100));
 
   } else if(pos === 'sold') {
 
     this.position = 'sold';
     this.posPrice = price;
-    this.checkPriceSold = Number(BigNumber(this.posPrice).times(BigNumber(1).plus(BigNumber(this.percentageSold).dividedBy(BigNumber(100)))));
+    this.checkPriceSold = this.posPrice * (1 + (this.percentageSold / 100));
 
   }
 
 };
 
-monitor.prototype.update = function(cs) {
+monitor.prototype.update = function(cs, callback) {
 
-  var diff = cs.close - cs.open;
-  var size = Math.abs(Number(BigNumber(cs.close).minus(BigNumber(cs.open)).round(2)));
-  var averageSize = this.storage.getAverageCandleStickSize(10, this.candleStickSizeMinutes);
+  this.storage.getLastNCompleteAggregatedCandleSticks(10, this.candleStickSizeMinutes, function(err, completeCandleSticks) {
 
-  var change = Number(BigNumber(size).dividedBy(2).round(2));
+    var averageSize = 0;
 
-  var newSl;
+  	if(completeCandleSticks.length > 0) {
+  		averageSize = tools.floor(_.reduce(completeCandleSticks, function(memo, entry){ return memo + Math.abs(entry.close - entry.open); }, 0) / 10, 2);
+  	}
 
-  if(size >= averageSize * 2) {
+    var diff = cs.close - cs.open;
+    var size = Math.abs(tools.round(cs.close - cs.open, 2));
 
-    if(this.position === 'bought' && diff > 0) {
+    var change = tools.round(size / 2, 2);
 
-      newSl = Number(BigNumber(this.checkPriceBought).plus(change));
+    var newSl;
 
-      this.logger.log('Stop loss increased! Old: ' + this.checkPriceBought + ' New: ' + newSl);
+    if(size >= averageSize * 2) {
 
-      this.checkPriceBought = newSl;
+      if(this.position === 'bought' && diff > 0) {
 
-    } else if(this.position === 'sold' && diff < 0) {
+        newSl = tools.round(this.checkPriceBought + change, 2);
 
-      newSl = Number(BigNumber(this.checkPriceSold).minus(change));
+        this.logger.log('Stop loss increased! Old: ' + this.checkPriceBought + ' New: ' + newSl);
 
-      this.logger.log('Stop loss decreased! Old: ' + this.checkPriceSold + ' New: ' + newSl);
+        this.checkPriceBought = newSl;
 
-      this.checkPriceSold = newSl;
+      } else if(this.position === 'sold' && diff < 0) {
+
+        newSl = tools.round(this.checkPriceSold - change, 2);
+
+        this.logger.log('Stop loss decreased! Old: ' + this.checkPriceSold + ' New: ' + newSl);
+
+        this.checkPriceSold = newSl;
+
+      }
 
     }
 
-  }
+    callback(null);
+
+  }.bind(this));
 
 };
 

@@ -30,13 +30,15 @@ Util.inherits(advisor, EventEmitter);
 
 advisor.prototype.start = function() {
 
-	var candleSticks = this.storage.getFinishedAggregatedCandleSticks(this.candleStickSize);
+	this.storage.getLastNCompleteAggregatedCandleSticks(1000, this.candleStickSize, function(err, candleSticks) {
 
-	for(var i = 0; i < candleSticks.length; i++) {
+		for(var i = 0; i < candleSticks.length; i++) {
 
-		var result = this.selectedIndicator.calculate(candleSticks[i]);
+			var result = this.selectedIndicator.calculate(candleSticks[i]);
 
-	}
+		}
+
+	}.bind(this));
 
 };
 

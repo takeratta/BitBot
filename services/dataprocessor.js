@@ -1,5 +1,4 @@
 var _ = require('underscore');
-var BigNumber = require('bignumber.js');
 var async = require('async');
 var tools = require('../util/tools.js');
 
@@ -9,7 +8,7 @@ var processor = function(storage, logger) {
   this.storage = storage;
   this.logger = logger;
 
-  _.bindAll(this, 'updateCandleStick', 'createBaseCandleSticks', 'processInitialLoad', 'processUpdate', 'initialize', 'updateCandleDB');
+  _.bindAll(this, 'updateCandleStick', 'createCandleSticks', 'processUpdate', 'updateCandleDB');
 
 };
 
@@ -32,14 +31,14 @@ processor.prototype.updateCandleStick = function (candleStick, tick) {
 
   } else {
 
-    var currentVwap = BigNumber(candleStick.vwap).times(BigNumber(candleStick.volume));
-    var newVwap = BigNumber(tick.price).times(BigNumber(tick.amount));
+    var currentVwap = candleStick.vwap * candleStick.volume;
+    var newVwap = tick.price * tick.amount;
 
     candleStick.high = _.max([candleStick.high, tick.price]);
     candleStick.low = _.min([candleStick.low, tick.price]);
 
-    candleStick.volume = Number(BigNumber(candleStick.volume).plus(BigNumber(tick.amount)).round(8));
-    candleStick.vwap = Number(currentVwap.plus(newVwap).dividedBy(BigNumber(candleStick.volume)).round(2));
+    candleStick.volume = tools.round(candleStick.volume + tick.amount, 8);
+    candleStick.vwap = tools.round((currentVwap + newVwap) / candleStick.volume, 2);
 
   }
 
@@ -49,192 +48,179 @@ processor.prototype.updateCandleStick = function (candleStick, tick) {
 
 };
 
-processor.prototype.createBaseCandleSticks = function (callback) {
+processor.prototype.createCandleSticks = function(ticks, callback) {
 
-  var previousClose = 0;
+  if(ticks.length > 0) {
 
-  if(this.ticks.length > 0) {
+    this.storage.getLastNonEmptyPeriod(function(err, lastStoragePeriod) {
 
-    var candleStickSizeSeconds = 60;
+      this.storage.getLastNonEmptyClose(function(err, lastNonEmptyClose) {
 
-    var tickTimeStamp = this.ticks[0].date;
+        var candleStickSizeSeconds = 60;
 
-    var lastStoragePeriod = this.storage.getLastNonEmptyPeriod();
-    var firstTickCandleStick = (Math.floor(tickTimeStamp/candleStickSizeSeconds)*candleStickSizeSeconds);
+        var toBePushed = [];
 
-    if(lastStoragePeriod < firstTickCandleStick && lastStoragePeriod !== 0) {
-      tickTimeStamp = lastStoragePeriod + candleStickSizeSeconds;
-    }
+        var previousClose = lastNonEmptyClose;
 
-    var now = tools.unixTimeStamp(new Date().getTime());
+        var tickTimeStamp = ticks[0].date;
 
-    var startTimeStamp = (Math.floor(tickTimeStamp/candleStickSizeSeconds)*candleStickSizeSeconds);
-    var stopTimeStamp = (Math.floor(now/candleStickSizeSeconds)*candleStickSizeSeconds);
+        var firstTickCandleStick = (Math.floor(ticks[0].date/candleStickSizeSeconds)*candleStickSizeSeconds);
 
-    var endTimeStamp = startTimeStamp + candleStickSizeSeconds;
-
-    while(endTimeStamp < this.ticks[0].date) {
-
-      previousClose = this.storage.getLastNonEmptyClose();
-
-      this.storage.push({'period':startTimeStamp,'open':previousClose,'high':previousClose,'low':previousClose,'close':previousClose,'volume':0, 'vwap':previousClose});
-
-      startTimeStamp = endTimeStamp;
-      endTimeStamp = endTimeStamp + candleStickSizeSeconds;
-
-    }
-
-    var currentCandleStick = {'period':startTimeStamp,'open':undefined,'high':undefined,'low':undefined,'close':undefined,'volume':0, 'vwap':undefined};
-
-    this.ticks.forEach(function(tick){
-
-      tickTimeStamp = tick.date;
-
-      while(tickTimeStamp >= endTimeStamp + candleStickSizeSeconds) {
-
-        if(currentCandleStick.volume > 0) {
-          this.storage.push(currentCandleStick);
+        if(lastStoragePeriod < firstTickCandleStick && lastStoragePeriod !== 0) {
+          tickTimeStamp = lastStoragePeriod + candleStickSizeSeconds;
         }
 
-        startTimeStamp = endTimeStamp;
-        endTimeStamp = endTimeStamp + candleStickSizeSeconds;
+        var now = tools.unixTimeStamp(new Date().getTime());
 
-        previousClose = this.storage.getLastNonEmptyClose();
+        var startTimeStamp = (Math.floor(tickTimeStamp/candleStickSizeSeconds)*candleStickSizeSeconds);
+        var stopTimeStamp = (Math.floor(now/candleStickSizeSeconds)*candleStickSizeSeconds);
 
-        this.storage.push({'period':startTimeStamp,'open':previousClose,'high':previousClose,'low':previousClose,'close':previousClose,'volume':0, 'vwap':previousClose});
+        var endTimeStamp = startTimeStamp + candleStickSizeSeconds;
 
-      }
+        while(endTimeStamp < ticks[0].date) {
 
-      if(tickTimeStamp >= endTimeStamp) {
+          toBePushed.push({'period':startTimeStamp,'open':previousClose,'high':previousClose,'low':previousClose,'close':previousClose,'volume':0, 'vwap':previousClose});
 
-        if(currentCandleStick.volume > 0) {
-          this.storage.push(currentCandleStick);
+          startTimeStamp = endTimeStamp;
+          endTimeStamp = endTimeStamp + candleStickSizeSeconds;
+
         }
 
-        startTimeStamp = endTimeStamp;
-        endTimeStamp = endTimeStamp + candleStickSizeSeconds;
+        var currentCandleStick = {'period':startTimeStamp,'open':undefined,'high':undefined,'low':undefined,'close':undefined,'volume':0,'vwap':undefined};
 
-        currentCandleStick = {'period':startTimeStamp,'open':undefined,'high':undefined,'low':undefined,'close':undefined,'volume':0, 'vwap':undefined};
+        ticks.forEach(function(tick) {
 
-      }
+          tickTimeStamp = tick.date;
 
-      if(tickTimeStamp >= startTimeStamp && tickTimeStamp < endTimeStamp) {
+          if(toBePushed.length > 0) {
+            previousClose = _.last(toBePushed).close;
+          }
 
-        currentCandleStick = this.updateCandleStick(currentCandleStick,tick);
+          while(tickTimeStamp >= endTimeStamp + candleStickSizeSeconds) {
+
+            if(currentCandleStick.volume > 0) {
+              toBePushed.push(currentCandleStick);
+            }
+
+            startTimeStamp = endTimeStamp;
+            endTimeStamp = endTimeStamp + candleStickSizeSeconds;
+
+            toBePushed.push({'period':startTimeStamp,'open':previousClose,'high':previousClose,'low':previousClose,'close':previousClose,'volume':0, 'vwap':previousClose});
+
+          }
+
+          if(tickTimeStamp >= endTimeStamp) {
+
+            if(currentCandleStick.volume > 0) {
+              toBePushed.push(currentCandleStick);
+            }
+
+            startTimeStamp = endTimeStamp;
+            endTimeStamp = endTimeStamp + candleStickSizeSeconds;
+
+            currentCandleStick = {'period':startTimeStamp,'open':undefined,'high':undefined,'low':undefined,'close':undefined,'volume':0, 'vwap':undefined};
+
+          }
+
+          if(tickTimeStamp >= startTimeStamp && tickTimeStamp < endTimeStamp) {
+
+            currentCandleStick = this.updateCandleStick(currentCandleStick,tick);
+
+          }
+
+        }.bind(this));
+
+        if(currentCandleStick.volume > 0) {
+
+          toBePushed.push(currentCandleStick);
+
+          startTimeStamp = endTimeStamp;
+          endTimeStamp = endTimeStamp + candleStickSizeSeconds;
+
+        }
+
+        if(toBePushed.length > 0) {
+          previousClose = _.last(toBePushed).close;
+        }
+
+        for(var i = startTimeStamp;i <= stopTimeStamp;i = i + candleStickSizeSeconds) {
+
+          var beginPeriod = i;
+          var endPeriod = beginPeriod + candleStickSizeSeconds;
+
+          toBePushed.push({'period':beginPeriod,'open':previousClose,'high':previousClose,'low':previousClose,'close':previousClose,'volume':0, 'vwap':previousClose});
+
+        }
+
+        async.eachSeries(toBePushed, function(candleStick, nextPush) {
+
+          this.storage.push(candleStick, nextPush);
+
+        }.bind(this), callback);
+
+      }.bind(this));
+
+    }.bind(this));
+
+  } else {
+
+    callback(null);
+
+  }
+
+};
+
+processor.prototype.processUpdate = function(err) {
+
+  if(err) {
+
+    var parsedError = JSON.stringify(err);
+
+    if(err.stack) {
+      parsedError = err.stack;
+    }
+
+    this.logger.error('Couldn\'t create candlesticks due to a database error');
+    this.logger.error(parsedError);
+
+    process.exit();
+
+  } else {
+
+    this.storage.getLastNCandles(1, function(err, candleSticks) {
+
+      var latestCandleStick = candleSticks[0];
+
+      if(!this.initialDBWriteDone) {
+
+        this.emit('initialDBWrite');
+        this.initialDBWriteDone = true;
+
+      } else {
+
+        this.emit('update', latestCandleStick);
 
       }
 
     }.bind(this));
 
-    if(currentCandleStick.volume > 0) {
-
-      this.storage.push(currentCandleStick);
-
-      startTimeStamp = endTimeStamp;
-      endTimeStamp = endTimeStamp + candleStickSizeSeconds;
-
-    }
-
-    for(var i = startTimeStamp;i <= stopTimeStamp;i = i + candleStickSizeSeconds) {
-
-      var beginPeriod = i;
-      var endPeriod = beginPeriod + candleStickSizeSeconds;
-
-      previousClose = this.storage.getLastNonEmptyClose();
-
-      this.storage.push({'period':beginPeriod,'open':previousClose,'high':previousClose,'low':previousClose,'close':previousClose,'volume':0, 'vwap':previousClose});
-
-    }
-
-    callback(null);
-
-  } else {
-
-    callback(null);
-
   }
-
-};
-
-processor.prototype.processInitialLoad = function(err, result) {
-
-  if(err) {
-
-    var parsedError = JSON.stringify(err);
-
-    if(err.stack) {
-      parsedError = err.stack;
-    }
-
-    this.logger.error('Couldn\'t create candlesticks due to a database error');
-    this.logger.error(parsedError);
-
-    process.exit();
-
-  } else {
-
-    this.emit('initialized');
-
-  }
-
-};
-
-processor.prototype.processUpdate = function(err, result) {
-
-  this.ticks = [];
-
-  if(err) {
-
-    var parsedError = JSON.stringify(err);
-
-    if(err.stack) {
-      parsedError = err.stack;
-    }
-
-    this.logger.error('Couldn\'t create candlesticks due to a database error');
-    this.logger.error(parsedError);
-
-    process.exit();
-
-  } else {
-
-    var latestCandleStick = this.storage.getLastNCandles(1)[0];
-
-    if(!this.initialDBWriteDone) {
-      this.emit('initialDBWrite');
-      this.initialDBWriteDone = true;
-    } else {
-
-      this.emit('update', latestCandleStick);
-
-    }
-
-  }
-
-};
-
-processor.prototype.initialize = function() {
-
-  async.waterfall([
-    this.storage.getDBCandles
-    ], this.processInitialLoad);
 
 };
 
 processor.prototype.updateCandleDB = function(ticks) {
 
-  var period = this.storage.getLastNonEmptyPeriod();
+  this.storage.getLastNonEmptyPeriod(function(err, period) {
 
-  this.ticks = _.filter(ticks,function(tick){
+    var newTicks = _.filter(ticks,function(tick){
 
-    return tick.date >= period;
+      return tick.date >= period;
 
-  });
+    });
 
-  async.waterfall([
-    this.createBaseCandleSticks,
-    this.storage.materialise
-    ], this.processUpdate);
+    this.createCandleSticks(newTicks, this.processUpdate);
+
+  }.bind(this));
 
 };
 

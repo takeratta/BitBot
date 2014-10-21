@@ -1,8 +1,7 @@
 var _ = require('underscore');
 
 var loggingservice = require('./services/loggingservice.js');
-var database = require('./services/db.js');
-var candlestorage = require('./services/candlestorage.js');
+var storageservice = require('./services/storage.js');
 var exchangeapiservice = require('./services/exchangeapi.js');
 var dataretriever = require('./services/dataretriever.js');
 var dataprocessor = require('./services/dataprocessor.js');
@@ -19,9 +18,8 @@ var config = require('./config.js');
 //------------------------------Config
 
 //------------------------------IntializeModules
-var logger = new loggingservice(config.debug);
-var db = new database(config.exchangeSettings, config.mongoConnectionString, logger);
-var storage = new candlestorage(db, logger);
+var logger = new loggingservice('app', config.debug);
+var storage = new storageservice(config.exchangeSettings, config.mongoConnectionString, logger);
 var exchangeapi = new exchangeapiservice(config.exchangeSettings, config.apiSettings, logger);
 var retriever = new dataretriever(config.downloaderRefreshSeconds, exchangeapi, logger);
 var processor = new dataprocessor(storage, logger);
@@ -30,19 +28,13 @@ var advisor = new tradingadvisor(config.indicatorSettings, config.candleStickSiz
 var agent = new tradingagent(config.tradingEnabled, config.exchangeSettings, storage, exchangeapi, logger);
 var pusher = new pushservice(config.pushOver, logger);
 var monitor = new ordermonitor(exchangeapi, logger);
-var reporter = new profitreporter(config.exchangeSettings.currencyPair, db, exchangeapi, logger);
+var reporter = new profitreporter(config.exchangeSettings.currencyPair, storage, exchangeapi, logger);
 var pricemon = new pricemonitor(config.stoplossSettings.percentageBought, config.stoplossSettings.percentageSold, config.candleStickSizeMinutes, storage, logger);
 //------------------------------IntializeModules
 
 retriever.on('update', function(ticks){
 
     processor.updateCandleDB(ticks);
-
-});
-
-processor.on('initialized', function(){
-
-    retriever.start();
 
 });
 
@@ -70,11 +62,17 @@ aggregator.on('update', function(cs){
 
     if(config.stoplossSettings.enabled) {
 
-        pricemon.update(cs);
+        pricemon.update(cs, function(err) {
+
+          advisor.update(cs, false);
+
+        });
+
+    } else {
+
+      advisor.update(cs, false);
 
     }
-
-    advisor.update(cs, false);
 
 });
 
@@ -171,14 +169,14 @@ reporter.on('report', function(report){
 var start = function() {
 
   //------------------------------AnnounceStart
-  console.log('------------------------------------------');
-  console.log('Starting BitBot v0.8.5');
-  console.log('Real Trading Enabled = ' + config.tradingEnabled);
-  console.log('Working Dir = ' + process.cwd());
-  console.log('------------------------------------------');
+  logger.log('------------------------------------------');
+  logger.log('Starting BitBot v0.9.0');
+  logger.log('Real Trading Enabled = ' + config.tradingEnabled);
+  logger.log('Working Dir = ' + process.cwd());
+  logger.log('------------------------------------------');
   //------------------------------AnnounceStart
 
-  processor.initialize();
+  retriever.start();
 
 };
 
