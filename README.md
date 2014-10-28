@@ -2,6 +2,8 @@
 
 BitBot is a Crypto-Currency trading bot and backtesting platform that connects to popular Bitcoin exchanges (Bitstamp, Kraken). It is written in javascript and runs on [Node.JS](http://nodejs.org).
 
+BitBot is modular and supports multiple trading strategies / exchanges.
+
 ## Dependencies
 
 - [Node.JS](http://nodejs.org)
@@ -11,9 +13,7 @@ BitBot is a Crypto-Currency trading bot and backtesting platform that connects t
 
 Make sure you have the latest Node.JS version and MongoDB installed.
 
-Clone this repository to a folder of your liking and execute the following command:
-
-	npm install
+Clone this repository to a folder of your liking and execute the following command: `npm install`
 
 Pay close attention to the log messages of NPM (there shouldn't be any errors).
 
@@ -21,10 +21,7 @@ Pay close attention to the log messages of NPM (there shouldn't be any errors).
 
 - Overwrite your files with the latest versions from this repository
 - Compare you config.js file with the config.sample.js file to make sure there aren't any extra settings available
-- Run the following command:
-
-
-	npm install
+- Run the following command: `npm install`
 
 ## Configuration basics
 
@@ -133,9 +130,24 @@ As of version 0.7 BitBot now uses indicators as small plugins. You can create yo
 
 For examples on how to use this template, go have a look at one of the existing indicators in the indicators folder.
 
+## Backtester
+
+The provided backtester simulates the settings you provided in config.js over a set of data. That set of data is the data you collected by running app.js over a period of time.
+
+Before you run the backtester, make sure you configured the following items in your config.js file:
+
+- exchangeSettings
+- apiSettings
+- indicatorSettings
+- backTesting
+	- initialAssetBalance
+	- initialCurrencyBalance
+
+The backtester needs access to your API settings to query your current trading fee. This will give you more accurate results when simulating.
+
 ## Usage
 
-Execute the following command in the folder where you installed BitBot:
+To run BitBot, execute the following command in the folder where you installed BitBot:
 
 	node app.js
 

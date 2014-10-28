@@ -24,13 +24,18 @@ var pricemon = new pricemonitor(config.stoplossSettings.percentageBought, config
 //------------------------------IntializeModules
 
 //------------------------------IntializeVariables
+var exchange = config.exchangeSettings.exchange;
+var asset = config.exchangeSettings.currencyPair.asset;
+var currency = config.exchangeSettings.currencyPair.currency;
 var candleStickSizeMinutes = config.candleStickSizeMinutes;
 var stopLossEnabled = config.stoplossSettings.enabled;
-var initialBalance = config.backTesting.initialBalance;
+var initialAssetBalance = config.backTesting.initialAssetBalance;
+var initialCurrencyBalance = config.backTesting.initialCurrencyBalance;
 var slippagePercentage = config.exchangeSettings.slippagePercentage;
-var USDBalance = initialBalance;
-var BTCBalance = 0;
-var initialBalanceBTC = 0;
+var USDBalance = initialCurrencyBalance;
+var BTCBalance = initialAssetBalance;
+var initialBalanceSumInBTC = 0;
+var initialBalanceSumInUSD = 0;
 var totalBalanceInUSD = 0;
 var totalBalanceInBTC = 0;
 var profit = 0;
@@ -66,7 +71,7 @@ var endDate;
 
 //------------------------------AnnounceStart
 logger.log('------------------------------------------');
-logger.log('Starting BitBot Back-Tester v0.9.0');
+logger.log('Starting BitBot Back-Tester v0.9.1');
 logger.log('Working Dir = ' + process.cwd());
 logger.log('------------------------------------------');
 //------------------------------AnnounceStart
@@ -131,16 +136,20 @@ var createOrder = function(type, stopLoss) {
 
     exitUSD = USDBalance;
 
-    var tradeResult = tools.round(exitUSD - entryUSD, 2);
+    if(entryUSD > 0) {
 
-    if(exitUSD > entryUSD) {
-      winners += 1;
-      totalGain = tools.round(totalGain + tradeResult, 2);
-      if(tradeResult > bigWinner) {bigWinner = tradeResult;}
-    } else {
-      losers += 1;
-      totalLoss = tools.round(totalLoss + tradeResult, 2);
-      if(tradeResult < bigLoser) {bigLoser = tradeResult;}
+      var tradeResult = tools.round(exitUSD - entryUSD, 2);
+
+      if(exitUSD > entryUSD) {
+        winners += 1;
+        totalGain = tools.round(totalGain + tradeResult, 2);
+        if(tradeResult > bigWinner) {bigWinner = tradeResult;}
+      } else {
+        losers += 1;
+        totalLoss = tools.round(totalLoss + tradeResult, 2);
+        if(tradeResult < bigLoser) {bigLoser = tradeResult;}
+      }
+
     }
 
     transactions += 1;
@@ -172,7 +181,8 @@ var calculate = function(err, result) {
 
   if(loopArray.length > 0) {
 
-    initialBalanceBTC = tools.round(USDBalance / _.first(loopArray).close, 2);
+    initialBalanceSumInBTC = BTCBalance + tools.round(USDBalance / _.first(loopArray).close, 2);
+    initialBalanceSumInUSD = USDBalance + tools.round(BTCBalance * _.first(loopArray).close, 2);
 
     var candleStickSizeSeconds = config.candleStickSizeMinutes * 60;
 
@@ -236,11 +246,11 @@ var report = function(firstCs, lastCs) {
 
   totalBalanceInUSD = tools.round(USDBalance + (BTCBalance * lastClose), 2);
   totalBalanceInBTC = tools.round(BTCBalance + (USDBalance / lastClose), 2);
-  profit = tools.round(totalBalanceInUSD - initialBalance, 2);
-  profitPercentage = tools.round(profit / initialBalance * 100, 2);
-  totalFeeCostsPercentage = tools.round(totalFeeCosts / initialBalance * 100, 2);
-  bhProfit = tools.round((lastCs.close - firstCs.open) * initialBalanceBTC, 2);
-  bhProfitPercentage = tools.round(bhProfit / initialBalance * 100, 2);
+  profit = tools.round(totalBalanceInUSD - initialBalanceSumInUSD, 2);
+  profitPercentage = tools.round(profit / initialBalanceSumInUSD * 100, 2);
+  totalFeeCostsPercentage = tools.round(totalFeeCosts / initialBalanceSumInUSD * 100, 2);
+  bhProfit = tools.round((lastCs.close - firstCs.open) * initialBalanceSumInBTC, 2);
+  bhProfitPercentage = tools.round(bhProfit / initialBalanceSumInUSD * 100, 2);
 
   if(totalBalanceInUSD > highestUSDValue) {
     highestUSDValue = totalBalanceInUSD;
@@ -253,11 +263,16 @@ var report = function(firstCs, lastCs) {
   averageLoss = tools.round(totalLoss / losers, 2);
 
   logger.log('----------Report----------');
+  logger.log('Exchange: ' + exchange);
   logger.log('Transaction Fee: ' + transactionFee + '%');
-  logger.log('Initial Balance: ' + initialBalance);
-  logger.log('Initial Balance BTC: ' + initialBalanceBTC);
-  logger.log('Final Balance: ' + totalBalanceInUSD);
-  logger.log('Final Balance BTC: ' + totalBalanceInBTC);
+  logger.log('Initial ' + asset + ' Balance: ' + initialAssetBalance);
+  logger.log('Initial ' + currency + ' Balance: ' + initialCurrencyBalance);
+  logger.log('Final ' + asset + ' Balance: ' + BTCBalance);
+  logger.log('Final ' + currency + ' Balance: ' + USDBalance);
+  logger.log('Total Initial Balance in ' + currency + ': ' + initialBalanceSumInUSD);
+  logger.log('Total Initial Balance in ' + asset + ': ' + initialBalanceSumInBTC);
+  logger.log('Total Final Balance in ' + currency + ': ' + totalBalanceInUSD);
+  logger.log('Total Final Balance in ' + asset + ': ' + totalBalanceInBTC);
   logger.log('Winning trades : ' + winners + ' Losing trades: ' + losers);
   logger.log('Biggest winner: ' + bigWinner + ' Biggest loser: ' + bigLoser);
   logger.log('Average winner: ' + averageGain + ' Average loser: ' + averageLoss);
@@ -265,7 +280,7 @@ var report = function(firstCs, lastCs) {
   logger.log('Buy and Hold Profit: ' + bhProfit + ' (' + bhProfitPercentage + '%)');
   logger.log('Lost on fees: ' + totalFeeCosts + ' (' + totalFeeCostsPercentage + '%)');
   logger.log('Total traded volue: ' + totalTradedVolume);
-  logger.log('Highest - Lowest USD Balance: ' + highestUSDValue + ' - ' + lowestUSDValue);
+  logger.log('Highest - Lowest ' + currency + ' Balance: ' + highestUSDValue + ' - ' + lowestUSDValue);
   logger.log('Open Price: ' + firstCs.open);
   logger.log('Close Price: ' + lastCs.close);
   logger.log('Start - End Date: ' + startDate + ' - ' + endDate);

@@ -170,7 +170,7 @@ var start = function() {
 
   //------------------------------AnnounceStart
   logger.log('------------------------------------------');
-  logger.log('Starting BitBot v0.9.0');
+  logger.log('Starting BitBot v0.9.1');
   logger.log('Real Trading Enabled = ' + config.tradingEnabled);
   logger.log('Working Dir = ' + process.cwd());
   logger.log('------------------------------------------');

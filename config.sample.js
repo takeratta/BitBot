@@ -78,7 +78,8 @@ config.pushOver = {
 
 //------------------------------BackTesting
 config.backTesting = {
-	initialBalance: 10000
+	initialAssetBalance: 0,
+	initialCurrencyBalance: 10000
 };
 //------------------------------BackTesting
 
