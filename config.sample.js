@@ -9,11 +9,13 @@ config.tradingEnabled = false;
 //------------------------------exchangeSettings
 config.exchangeSettings = {
 	exchange: '',
-	// Options: (bitstamp, kraken)
+	// Options: (bitstamp, kraken, btce)
 	currencyPair: {pair: '', asset: '', currency: ''},
 	// For Bitstamp just use {pair: 'XBTUSD', asset: 'XBT', currency: 'USD'}
 	// For Kraken look up the currency pairs in their API: https://api.kraken.com/0/public/AssetPairs
 	// Kraken Example: {pair: 'XXBTZEUR', asset: 'XXBT', currency: 'ZEUR'}
+	// For BTC-E look up the currency pairs in their API: https://btc-e.com/api/3/info
+	// BTC-E Example: {pair: 'BTC_USD', asset: 'BTC', currency: 'USD'}
 	tradingReserveAsset: 0,
 	// Enter an amount of "asset" you would like to freeze (not trade)
 	tradingReserveCurrency: 0,
@@ -25,7 +27,8 @@ config.exchangeSettings = {
 //------------------------------APISettings
 config.apiSettings = {
 	bitstamp: {clientId: 0, apiKey: '', secret: ''},
-	kraken: {apiKey: '', secret: ''}
+	kraken: {apiKey: '', secret: ''},
+	btce: {apiKey: '', secret: ''}
 };
 //------------------------------APISettings
 

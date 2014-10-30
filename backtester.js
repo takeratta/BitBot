@@ -71,7 +71,7 @@ var endDate;
 
 //------------------------------AnnounceStart
 logger.log('------------------------------------------');
-logger.log('Starting BitBot Back-Tester v0.9.1');
+logger.log('Starting BitBot Back-Tester v0.9.2');
 logger.log('Working Dir = ' + process.cwd());
 logger.log('------------------------------------------');
 //------------------------------AnnounceStart

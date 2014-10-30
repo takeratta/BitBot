@@ -1,16 +1,12 @@
-//-------------------- REMOVE THIS BLOCK
-console.log('If you want this code to do anything, remove this code block!');
-process.exit();
-//-------------------- REMOVE THIS BLOCK
-
 var _ = require('underscore');
 var async = require('async');
+var btce = require('btc-e');
 
 var exchange = function(currencyPair, apiSettings, logger) {
 
   this.currencyPair = currencyPair;
 
-  // intialize your API with it's apiSettings here
+  this.btce = new btce(apiSettings.apiKey, apiSettings.secret);
 
   this.q = async.queue(function (task, callback) {
     this.logger.debug('Added ' + task.name + ' API call to the queue.');
@@ -86,14 +82,29 @@ exchange.prototype.getTrades = function(retry, cb) {
 
   var wrapper = function() {
 
+    var pair = this.currencyPair.pair.toLowerCase();
+
     var handler = function(err, response) {
 
-      cb(null, [{date: timestamp, price: number, amount: number}]);
+      if(!err) {
+
+        var trades = _.map(response.reverse(), function(entry) {
+
+          return {date: parseInt(entry.date), price: parseFloat(entry.price), amount: parseFloat(entry.amount)};
+
+        });
+
+        cb(null, trades);
+
+      } else {
+
+        cb(err, null);
+
+      }
 
     };
 
-    // Pass this as callback to your exchange function (Expects an Err, Result output).
-    this.errorHandler(this.getTrades, args, retry, 'getTrades', handler);
+    this.btce.trades(pair, this.errorHandler(this.getTrades, args, retry, 'getTrades', handler));
 
   }.bind(this);
 
@@ -107,14 +118,24 @@ exchange.prototype.getBalance = function(retry, cb) {
 
   var wrapper = function() {
 
+    var asset = this.currencyPair.asset.toLowerCase();
+    var currency = this.currencyPair.currency.toLowerCase();
+
     var handler = function(err, response) {
 
-      cb(null, {currencyAvailable: number, assetAvailable: number, fee: number});
+      if(!err) {
+
+        cb(null, {assetAvailable: response.funds[asset], currencyAvailable: response.funds[currency], fee: 0.2});
+
+      } else {
+
+        cb(err, null);
+
+      }
 
     };
 
-    // Pass this as callback to your exchange function (Expects an Err, Result output).
-    this.errorHandler(this.getBalance, args, retry, 'getBalance', handler);
+    this.btce.getInfo(this.errorHandler(this.getBalance, args, retry, 'getBalance', handler));
 
   }.bind(this);
 
@@ -128,14 +149,31 @@ exchange.prototype.getOrderBook = function(retry, cb) {
 
   var wrapper = function() {
 
+    var pair = this.currencyPair.pair.toLowerCase();
+
     var handler = function(err, response) {
 
-      cb(null, {bids: [{assetAmount: number, currencyPrice: number}], asks: [{assetAmount: number, currencyPrice: number}]});
+      if(!err) {
+
+        var bids = _.map(response.bids, function(bid) {
+          return {assetAmount: bid[1], currencyPrice: bid[0]};
+        });
+
+        var asks = _.map(response.asks, function(ask) {
+          return {assetAmount: ask[1], currencyPrice: ask[0]};
+        });
+
+        cb(null, {bids: bids, asks: asks});
+
+      } else {
+
+        cb(err, null);
+
+      }
 
     };
 
-    // Pass this as callback to your exchange function (Expects an Err, Result output).
-    this.errorHandler(this.getOrderBook, args, retry, 'getOrderBook', handler);
+    this.btce.depth(pair, this.errorHandler(this.getOrderBook, args, retry, 'getOrderBook', handler));
 
   }.bind(this);
 
@@ -149,14 +187,35 @@ exchange.prototype.placeOrder = function(type, amount, price, retry, cb) {
 
   var wrapper = function() {
 
+    var pair = this.currencyPair.pair.toLowerCase();
+
     var handler = function(err, response) {
 
-      cb(null, {txid: transaction_id});
+      if(!err) {
+
+        cb(null, {txid: response.order_id});
+
+      } else {
+
+        cb(err, null);
+
+      }
 
     };
 
-    // Pass this as callback to your exchange function (Expects an Err, Result output).
-    this.errorHandler(this.placeOrder, args, retry, 'placeOrder', handler);
+    if(type === 'buy') {
+
+      this.btce.trade(pair, 'buy', price, amount, this.errorHandler(this.placeOrder, args, retry, 'placeOrder', handler));
+
+    } else if (type === 'sell') {
+
+      this.btce.trade(pair, 'sell', price, amount, this.errorHandler(this.placeOrder, args, retry, 'placeOrder', handler));
+
+    } else {
+
+      cb(new Error('Invalid order type!'), null);
+
+    }
 
   }.bind(this);
 
@@ -172,12 +231,27 @@ exchange.prototype.orderFilled = function(order, retry, cb) {
 
     var handler = function(err, response) {
 
-      cb(null, boolean);
+      if(!err) {
+
+        if(response[order]) {
+
+          cb(null, false);
+
+        } else {
+
+          cb(null, true);
+
+        }
+
+      } else {
+
+        cb(err, null);
+
+      }
 
     };
 
-    // Pass this as callback to your exchange function (Expects an Err, Result output).
-    this.errorHandler(this.orderFilled, args, retry, 'orderFilled', handler);
+    this.btce.orderInfo(order, this.errorHandler(this.orderFilled, args, retry, 'orderFilled', handler));
 
   }.bind(this);
 
@@ -191,14 +265,41 @@ exchange.prototype.cancelOrder = function(order, retry, cb) {
 
   var wrapper = function() {
 
-    var handler = function(err, response) {
+    this.orderFilled(order, retry, function(err, filled) {
 
-      cb(null, boolean);
+      if(!filled && !err) {
 
-    };
+        var handler = function(err, response) {
 
-    // Pass this as callback to your exchange function (Expects an Err, Result output).
-    this.errorHandler(this.cancelOrder, args, retry, 'cancelOrder', handler);
+          if(!err) {
+
+            if(response.order_id === order) {
+              cb(null, true);
+            } else {
+              cb(null, false);
+            }
+
+          } else {
+
+            cb(err, null);
+
+          }
+
+        };
+
+        this.btce.cancelOrder(order, this.errorHandler(this.cancelOrder, args, retry, 'cancelOrder', handler));
+
+      } else if(filled && !err) {
+
+        cb(null, false);
+
+      } else {
+
+        cb(err, null);
+
+      }
+
+    }.bind(this));
 
   }.bind(this);
 

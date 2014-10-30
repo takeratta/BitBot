@@ -4,6 +4,18 @@ BitBot is a Crypto-Currency trading bot and backtesting platform that connects t
 
 BitBot is modular and supports multiple trading strategies / exchanges.
 
+##### Supported Exchanges
+
+- Bitstamp
+- Kraken
+- BTC-E
+
+##### Supported Indicators
+
+- MACD
+- PPO
+- PSAR
+
 ## Dependencies
 
 - [Node.JS](http://nodejs.org)
@@ -44,12 +56,15 @@ Pay close attention to the currencyPair settings:
 	// For Bitstamp just use {pair: 'XBTUSD', asset: 'XBT', currency: 'USD'}
 	// For Kraken look up the currency pairs in their API: https://api.kraken.com/0/public/AssetPairs
 	// Kraken Example: {pair: 'XXBTZEUR', asset: 'XXBT', currency: 'ZEUR'}
+	// For BTC-E look up the currency pairs in their API: https://btc-e.com/api/3/info
+	// BTC-E Example: {pair: 'BTC_USD', asset: 'BTC', currency: 'USD'}
 
 Then fill in your API details:
 
 	config.apiSettings = {
 		bitstamp: {clientId: 0, apiKey: '', secret: ''},
-		kraken: {apiKey: '', secret: ''}
+		kraken: {apiKey: '', secret: ''},
+		btce: {apiKey: '', secret: ''}
 	};
 
 Make sure you enter the correct connection string for your MongoDB instance:
