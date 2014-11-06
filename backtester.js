@@ -19,15 +19,15 @@ var logger = new loggingservice('backtester', config.debug);
 var storage = new storageservice(config.exchangeSettings, config.mongoConnectionString, logger);
 var exchangeapi = new exchangeapiservice(config.exchangeSettings, config.apiSettings, logger);
 var processor = new dataprocessor(storage, logger);
-var advisor = new tradingadvisor(config.indicatorSettings, config.candleStickSizeMinutes, true, storage, logger);
-var pricemon = new pricemonitor(config.stoplossSettings.percentageBought, config.stoplossSettings.percentageSold, config.candleStickSizeMinutes, storage, logger);
+var advisor = new tradingadvisor(config.indicatorSettings, true, storage, logger);
+var pricemon = new pricemonitor(config.stoplossSettings.percentageBought, config.stoplossSettings.percentageSold, config.indicatorSettings.candleStickSizeMinutes, storage, logger);
 //------------------------------IntializeModules
 
 //------------------------------IntializeVariables
 var exchange = config.exchangeSettings.exchange;
 var asset = config.exchangeSettings.currencyPair.asset;
 var currency = config.exchangeSettings.currencyPair.currency;
-var candleStickSizeMinutes = config.candleStickSizeMinutes;
+var candleStickSizeMinutes = config.indicatorSettings.candleStickSizeMinutes;
 var stopLossEnabled = config.stoplossSettings.enabled;
 var initialAssetBalance = config.backTesting.initialAssetBalance;
 var initialCurrencyBalance = config.backTesting.initialCurrencyBalance;
@@ -71,7 +71,7 @@ var endDate;
 
 //------------------------------AnnounceStart
 logger.log('------------------------------------------');
-logger.log('Starting BitBot Back-Tester v0.9.2');
+logger.log('Starting BitBot Back-Tester v0.9.3');
 logger.log('Working Dir = ' + process.cwd());
 logger.log('------------------------------------------');
 //------------------------------AnnounceStart
@@ -184,7 +184,7 @@ var calculate = function(err, result) {
     initialBalanceSumInBTC = BTCBalance + tools.round(USDBalance / _.first(loopArray).close, 2);
     initialBalanceSumInUSD = USDBalance + tools.round(BTCBalance * _.first(loopArray).close, 2);
 
-    var candleStickSizeSeconds = config.candleStickSizeMinutes * 60;
+    var candleStickSizeSeconds = candleStickSizeMinutes * 60;
 
     if(csArray.length > 0) {
 
@@ -214,7 +214,7 @@ var calculate = function(err, result) {
 
             pricemon.update(candle, function(err) {
 
-              logger.debug('Backtest: Created a new ' + config.candleStickSizeMinutes + ' minute candlestick!');
+              logger.debug('Backtest: Created a new ' + candleStickSizeMinutes + ' minute candlestick!');
               logger.debug(JSON.stringify(candle));
               advisor.update(candle);
 
@@ -222,7 +222,7 @@ var calculate = function(err, result) {
 
           } else {
 
-            logger.debug('Backtest: Created a new ' + config.candleStickSizeMinutes + ' minute candlestick!');
+            logger.debug('Backtest: Created a new ' + candleStickSizeMinutes + ' minute candlestick!');
             logger.debug(JSON.stringify(candle));
             advisor.update(candle);
 
@@ -295,7 +295,7 @@ var start = function() {
     {
       balance: function(cb) {exchangeapi.getBalance(true, cb);},
       dbCandleSticks: function(cb) {storage.getAllCandlesSince(0, cb);},
-      aggregatedCandleSticks: function(cb) {storage.getAggregatedCandleSticks(config.candleStickSizeMinutes, cb);}
+      aggregatedCandleSticks: function(cb) {storage.getAggregatedCandleSticks(candleStickSizeMinutes, cb);}
     },
     calculate
   );

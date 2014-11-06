@@ -1,6 +1,6 @@
 var _ = require('underscore');
 var async = require('async');
-var Kraken = require('kraken-api');
+var Kraken = require('kraken-exchange-api');
 
 var exchange = function(currencyPair, apiSettings, logger) {
 

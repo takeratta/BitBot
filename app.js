@@ -23,13 +23,13 @@ var storage = new storageservice(config.exchangeSettings, config.mongoConnection
 var exchangeapi = new exchangeapiservice(config.exchangeSettings, config.apiSettings, logger);
 var retriever = new dataretriever(config.downloaderRefreshSeconds, exchangeapi, logger);
 var processor = new dataprocessor(storage, logger);
-var aggregator = new candleaggregator(config.candleStickSizeMinutes, storage, logger);
-var advisor = new tradingadvisor(config.indicatorSettings, config.candleStickSizeMinutes, false, storage, logger);
+var aggregator = new candleaggregator(config.indicatorSettings.candleStickSizeMinutes, storage, logger);
+var advisor = new tradingadvisor(config.indicatorSettings, false, storage, logger);
 var agent = new tradingagent(config.tradingEnabled, config.exchangeSettings, storage, exchangeapi, logger);
 var pusher = new pushservice(config.pushOver, logger);
 var monitor = new ordermonitor(exchangeapi, logger);
 var reporter = new profitreporter(config.exchangeSettings.currencyPair, storage, exchangeapi, logger);
-var pricemon = new pricemonitor(config.stoplossSettings.percentageBought, config.stoplossSettings.percentageSold, config.candleStickSizeMinutes, storage, logger);
+var pricemon = new pricemonitor(config.stoplossSettings.percentageBought, config.stoplossSettings.percentageSold, config.indicatorSettings.candleStickSizeMinutes, storage, logger);
 //------------------------------IntializeModules
 
 retriever.on('update', function(ticks){
@@ -170,7 +170,7 @@ var start = function() {
 
   //------------------------------AnnounceStart
   logger.log('------------------------------------------');
-  logger.log('Starting BitBot v0.9.2');
+  logger.log('Starting BitBot v0.9.3');
   logger.log('Real Trading Enabled = ' + config.tradingEnabled);
   logger.log('Working Dir = ' + process.cwd());
   logger.log('------------------------------------------');

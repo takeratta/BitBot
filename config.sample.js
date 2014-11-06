@@ -45,22 +45,19 @@ config.downloaderRefreshSeconds = 10;
 // Best to keep this default setting unless you know what you are doing
 //------------------------------downloaderSettings
 
-//------------------------------candleStickSizeSettings
-config.candleStickSizeMinutes = 5;
-//------------------------------candleStickSizeSettings
-
-//------------------------------orderSettings
-config.orderKeepAliveMinutes = config.candleStickSizeMinutes / 10;
-//------------------------------orderSettings
-
 //------------------------------IndicatorSettings
 config.indicatorSettings = {
 	indicator: 'MACD',
 	// Choices: Any indicator from the indicators folder
-	options: {neededPeriods: 26, shortPeriods: 12, longPeriods: 26, emaPeriods: 9, buyTreshold: 0, sellTreshold: 0}
+	options: {neededPeriods: 26, shortPeriods: 12, longPeriods: 26, emaPeriods: 9, buyTreshold: 0, sellTreshold: 0},
 	// Options needed for your indicator (Look them up in the indicator's file)
+	candleStickSizeMinutes: 5
 };
 //------------------------------IndicatorSettings
+
+//------------------------------orderSettings
+config.orderKeepAliveMinutes = config.indicatorSettings.candleStickSizeMinutes / 10;
+//------------------------------orderSettings
 
 //------------------------------stopLossSettings
 config.stoplossSettings = {

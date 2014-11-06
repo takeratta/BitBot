@@ -291,28 +291,43 @@ storage.prototype.aggregateCandleSticks = function(candleStickSize, candleSticks
 	var aggregatedCandleSticks = [];
 
 	var startTimeStamp = Math.floor(candleSticks[0].period / candleStickSizeSeconds) * candleStickSizeSeconds;
+	var beginPeriod = startTimeStamp;
+	var endPeriod = startTimeStamp + candleStickSizeSeconds;
 	var stopTimeStamp = _.last(candleSticks).period;
 
-	var filterOnPeriod = function(candleStick) { return candleStick.period >= beginPeriod && candleStick.period < endPeriod; };
+	var relevantSticks = [];
+
 	var filterOnVolume = function(candleStick) { return candleStick.volume > 0; };
 
-	for(var i = startTimeStamp;i <= stopTimeStamp;i = i + candleStickSizeSeconds) {
+	_.each(candleSticks, function(candleStick) {
 
-		var beginPeriod = i;
-		var endPeriod = beginPeriod + candleStickSizeSeconds;
+		if(candleStick.period >= beginPeriod && candleStick.period < endPeriod) {
 
-		var relevantSticks = _.filter(candleSticks, filterOnPeriod);
+			relevantSticks.push(candleStick);
 
-		var vrelevantSticks = _.filter(relevantSticks, filterOnVolume);
+		} else {
 
-		if(vrelevantSticks.length > 0) {
-			relevantSticks = vrelevantSticks;
+			var vrelevantSticks = _.filter(relevantSticks, filterOnVolume);
+
+			if(vrelevantSticks.length > 0) {
+				relevantSticks = vrelevantSticks;
+			}
+
+			aggregatedCandleSticks.push(this.calculateAggregatedCandleStick(beginPeriod, relevantSticks));
+
+			beginPeriod = endPeriod;
+			endPeriod = endPeriod + candleStickSizeSeconds;
+
+			relevantSticks = [];
+
+			relevantSticks.push(candleStick);
+
 		}
 
-		var currentCandleStick = this.calculateAggregatedCandleStick(beginPeriod, relevantSticks);
+	}.bind(this));
 
-		aggregatedCandleSticks.push(currentCandleStick);
-
+	if(relevantSticks.length > 0) {
+		aggregatedCandleSticks.push(this.calculateAggregatedCandleStick(beginPeriod, relevantSticks));
 	}
 
 	return aggregatedCandleSticks;

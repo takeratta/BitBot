@@ -2,9 +2,9 @@ var _ = require('underscore');
 var async = require('async');
 var fs = require('fs');
 
-var advisor = function(indicatorSettings, candleStickSize, backTesting, storage, logger) {
+var advisor = function(indicatorSettings, backTesting, storage, logger) {
 
-	this.candleStickSize = candleStickSize;
+	this.candleStickSize = indicatorSettings.candleStickSizeMinutes;
 	this.backTesting = backTesting;
 	this.storage = storage;
 	this.logger = logger;

@@ -23,6 +23,19 @@ tools.prototype.floor = function(value, decimals) {
     return Number(Math.floor(value+'e'+decimals)+'e-'+decimals);
 };
 
+tools.prototype.rangeToArray = function(range) {
+
+  var result = [];
+  var increment = this.floor(1 / Math.pow(10,range[0]), range[0]);
+
+  for(var i = range[1]; i <= range[2]; i = this.round(i + increment,range[0])) {
+    result.push(i);
+  }
+
+  return result;
+
+}
+
 var utiltools = new tools();
 
 module.exports = utiltools;
