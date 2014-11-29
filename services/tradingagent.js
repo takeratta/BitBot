@@ -136,6 +136,8 @@ agent.prototype.placeSimulatedOrder = function() {
 
 		this.orderDetails.order = 'Simulated';
 
+		this.orderDetails.status = order.status;
+
 		this.logger.log('Placed simulated ' + this.orderDetails.orderType + ' order: (' + this.orderDetails.amount + '@' + this.orderDetails.price + ')');
 
 		this.emit('simulatedOrder', this.orderDetails);
@@ -153,6 +155,8 @@ agent.prototype.processOrder = function(err, order) {
 	} else {
 
 		this.orderDetails.order = order.txid;
+
+		this.orderDetails.status = order.status;
 
 		this.logger.log('Placed ' + this.orderDetails.orderType + ' order: ' + this.orderDetails.order + ' (' + this.orderDetails.amount + '@' + this.orderDetails.price + ')');
 

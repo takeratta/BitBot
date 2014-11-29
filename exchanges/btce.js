@@ -193,7 +193,15 @@ exchange.prototype.placeOrder = function(type, amount, price, retry, cb) {
 
       if(!err) {
 
-        cb(null, {txid: response.order_id});
+        var status = 'open';
+
+        if(response.order_id === 0) {
+
+          status = 'filled';
+
+        }
+
+        cb(null, {txid: response.order_id, status: status});
 
       } else {
 

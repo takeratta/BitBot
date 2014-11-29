@@ -78,7 +78,7 @@ monitor.prototype.add = function(orderDetails, cancelTime) {
 
     this.logger.log('Monitoring order: ' + this.checkOrder.id + ' (Cancellation after ' + cancelTime + ' minutes)');
 
-    if(this.checkOrder.id === 'Simulated') {
+    if(this.checkOrder.status === 'filled') {
 
       this.processSimulation(this.checkOrder);
 

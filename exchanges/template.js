@@ -151,7 +151,7 @@ exchange.prototype.placeOrder = function(type, amount, price, retry, cb) {
 
     var handler = function(err, response) {
 
-      cb(null, {txid: transaction_id});
+      cb(null, {txid: transaction_id, status: 'open'});
 
     };
 

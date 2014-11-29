@@ -199,7 +199,7 @@ exchange.prototype.placeOrder = function(type, amount, price, retry, cb) {
 
         if(!result.error) {
 
-          cb(null, {txid: result.id});
+          cb(null, {txid: result.id, status: 'open'});
 
         } else {
 

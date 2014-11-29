@@ -256,7 +256,7 @@ exchange.prototype.placeOrder = function(type, amount, price, retry, cb) {
 
       if(!err) {
 
-        cb(null, {txid: data.result.txid[0]});
+        cb(null, {txid: data.result.txid[0], status: 'open'});
 
       } else {
 
