@@ -74,7 +74,7 @@ monitor.prototype.add = function(orderDetails, cancelTime) {
 
   var wrapper = function() {
 
-    this.checkOrder = {id:orderDetails.order, orderDetails:orderDetails, status:'open'};
+    this.checkOrder = {id: orderDetails.order, orderDetails: orderDetails, status: orderDetails.status};
 
     this.logger.log('Monitoring order: ' + this.checkOrder.id + ' (Cancellation after ' + cancelTime + ' minutes)');
 
