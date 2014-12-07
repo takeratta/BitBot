@@ -12,7 +12,7 @@ var exchange = function(currencyPair, apiSettings, logger) {
     this.logger.debug('Added ' + task.name + ' API call to the queue.');
     this.logger.debug('There are currently ' + this.q.running() + ' running jobs and ' + this.q.length() + ' jobs in queue.');
     task.func();
-    setTimeout(callback,1000);
+    setTimeout(callback,2000);
   }.bind(this), 1);
 
   this.logger = logger;
@@ -281,31 +281,47 @@ exchange.prototype.cancelOrder = function(order, retry, cb) {
 
   var args = arguments;
 
-  var wrapper = function() {
+  this.orderFilled(order, retry, function(err, filled) {
 
-    var handler = function(err, result) {
+    if(!filled && !err) {
 
-      if(!err) {
+      var wrapper = function() {
 
-        if(!result.error) {
-          cb(null, true);
-        } else {
-          cb(null, false);
-        }
+        var handler = function(err, result) {
 
-      } else {
+          if(!err) {
 
-        cb(err, null);
+            if(!result.error) {
+              cb(null, true);
+            } else {
+              cb(null, false);
+            }
 
-      }
+          } else {
 
-    };
+            cb(err, null);
 
-    this.bitstamp.cancel_order(order,this.errorHandler(this.cancelOrder, args, retry, 'cancelOrder', handler));
+          }
 
-  }.bind(this);
+        };
 
-  this.q.push({name: 'cancelOrder', func: wrapper});
+        this.bitstamp.cancel_order(order,this.errorHandler(this.cancelOrder, args, retry, 'cancelOrder', handler));
+
+      }.bind(this);
+
+      this.q.push({name: 'cancelOrder', func: wrapper});
+
+    } else if(filled && !err) {
+
+      cb(null, false);
+
+    } else {
+
+      cb(err, null);
+
+    }
+
+  }.bind(this));
 
 };
 

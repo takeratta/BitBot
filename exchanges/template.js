@@ -16,7 +16,7 @@ var exchange = function(currencyPair, apiSettings, logger) {
     this.logger.debug('Added ' + task.name + ' API call to the queue.');
     this.logger.debug('There are currently ' + this.q.running() + ' running jobs and ' + this.q.length() + ' jobs in queue.');
     task.func();
-    setTimeout(callback,1000);
+    setTimeout(callback,2000);
   }.bind(this), 1);
 
   this.logger = logger;

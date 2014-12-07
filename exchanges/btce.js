@@ -12,7 +12,7 @@ var exchange = function(currencyPair, apiSettings, logger) {
     this.logger.debug('Added ' + task.name + ' API call to the queue.');
     this.logger.debug('There are currently ' + this.q.running() + ' running jobs and ' + this.q.length() + ' jobs in queue.');
     task.func();
-    setTimeout(callback,1000);
+    setTimeout(callback,2000);
   }.bind(this), 1);
 
   this.logger = logger;
@@ -271,11 +271,11 @@ exchange.prototype.cancelOrder = function(order, retry, cb) {
 
   var args = arguments;
 
-  var wrapper = function() {
+  this.orderFilled(order, retry, function(err, filled) {
 
-    this.orderFilled(order, retry, function(err, filled) {
+    if(!filled && !err) {
 
-      if(!filled && !err) {
+      var wrapper = function() {
 
         var handler = function(err, response) {
 
@@ -297,21 +297,21 @@ exchange.prototype.cancelOrder = function(order, retry, cb) {
 
         this.btce.cancelOrder(order, this.errorHandler(this.cancelOrder, args, retry, 'cancelOrder', handler));
 
-      } else if(filled && !err) {
+      }.bind(this);
 
-        cb(null, false);
+      this.q.push({name: 'cancelOrder', func: wrapper});
 
-      } else {
+    } else if(filled && !err) {
 
-        cb(err, null);
+      cb(null, false);
 
-      }
+    } else {
 
-    }.bind(this));
+      cb(err, null);
 
-  }.bind(this);
+    }
 
-  this.q.push({name: 'cancelOrder', func: wrapper});
+  }.bind(this));
 
 };
 
