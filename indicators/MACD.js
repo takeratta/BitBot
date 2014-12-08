@@ -44,7 +44,7 @@ indicator.prototype.calculate = function(cs) {
 
   var macd = emaShort - emaLong;
   var macdSignal = calculateEma(this.options.emaPeriods, macd, this.previousIndicator.macdSignal);
-  var macdHistogram = tools.round(macd - macdSignal, 2);
+  var macdHistogram = tools.round(macd - macdSignal, 8);
 
   this.indicator = {'emaLong': emaLong, 'emaShort': emaShort, 'macd': macd, 'macdSignal': macdSignal, 'result': macdHistogram};
 

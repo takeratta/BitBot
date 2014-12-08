@@ -8,19 +8,29 @@ tools.prototype.unixTimeStamp = function(timestamp) {
 };
 
 tools.prototype.getRandomInt = function(min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
+  return Math.floor(Math.random() * (max - min + 1)) + min;
 };
 
 tools.prototype.getRandomArbitrary = function(decimals, min, max) {
-    return (Math.random() * (max - min) + min).toFixed(decimals);
+  return (Math.random() * (max - min) + min).toFixed(decimals);
 };
 
 tools.prototype.round = function(value, decimals) {
-    return Number(Math.round(value+'e'+decimals)+'e-'+decimals);
+  // Shift
+  value = value.toString().split('e');
+  value = Math.round(+(value[0] + 'e' + (value[1] ? (+value[1] + decimals) : decimals)));
+  // Shift back
+  value = value.toString().split('e');
+  return Number((value[0] + 'e' + (value[1] ? (+value[1] - decimals) : -decimals)));
 };
 
 tools.prototype.floor = function(value, decimals) {
-    return Number(Math.floor(value+'e'+decimals)+'e-'+decimals);
+  // Shift
+  value = value.toString().split('e');
+  value = Math.floor(+(value[0] + 'e' + (value[1] ? (+value[1] + decimals) : decimals)));
+  // Shift back
+  value = value.toString().split('e');
+  return Number((value[0] + 'e' + (value[1] ? (+value[1] - decimals) : -decimals)));
 };
 
 tools.prototype.rangeToArray = function(range) {

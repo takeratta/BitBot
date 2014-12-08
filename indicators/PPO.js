@@ -44,7 +44,7 @@ indicator.prototype.calculate = function(cs) {
 
   var PPO = ((emaShort - emaLong) / emaLong) * 100;
   var PPOSignal = calculateEma(this.options.emaPeriods, PPO, this.previousIndicator.PPOSignal);
-  var PPOHistogram = tools.round(PPO - PPOSignal, 2);
+  var PPOHistogram = tools.round(PPO - PPOSignal, 8);
 
   this.indicator = {'emaLong': emaLong, 'emaShort': emaShort, 'PPO': PPO, 'PPOSignal': PPOSignal, 'result': PPOHistogram};
 

@@ -62,51 +62,31 @@ agent.prototype.calculateOrder = function(result) {
 	var orderBook = result.orderBook;
 
 	var lastClose = result.lastClose;
-	var minClose = tools.round(lastClose * 0.9975, 2);
-	var maxClose = tools.round(lastClose * 1.0025, 2);
 
 	this.logger.log('Preparing to place a ' + this.orderDetails.orderType + ' order! (' + this.currencyPair.asset + ' Balance: ' + this.orderDetails.assetBalance + ' ' + this.currencyPair.currency + ' Balance: ' + this.orderDetails.currencyBalance + ' Trading Fee: ' + this.orderDetails.tradingFee +')');
 
 	if(this.orderDetails.orderType === 'buy') {
 
-		//var lowestAsk = _.first(orderBook.asks)[0];
-		/*var lowestAsk = _.min(orderBook.asks, function(ask){ return parseFloat(ask[0]); })[0];
-
-		if(lowestAsk < minClose) {
-			lowestAsk = minClose;
-		} else if(lowestAsk > lastClose) {
-			lowestAsk = lastClose;
-		}*/
-
 		var lowestAsk = lastClose;
 
-		var lowestAskWithSlippage = tools.round(lowestAsk * (1 + (this.slippagePercentage / 100)), 2);
+		var lowestAskWithSlippage = tools.round(lowestAsk * (1 + (this.slippagePercentage / 100)), 8);
 		var balance = (this.orderDetails.currencyBalance - this.tradingReserveCurrency) * (1 - (this.orderDetails.tradingFee / 100));
 
 		this.logger.log('Lowest Ask: ' + lowestAsk + ' Lowest Ask With Slippage: ' + lowestAskWithSlippage);
 
 		this.orderDetails.price = lowestAskWithSlippage;
-		this.orderDetails.amount = tools.round((balance / this.orderDetails.price) - 0.005, 2);
+		this.orderDetails.amount = tools.floor(balance / this.orderDetails.price, 8);
 
 	} else if(this.orderDetails.orderType === 'sell') {
 
-		//var highestBid = _.first(orderBook.bids)[0];
-		/*var highestBid = _.max(orderBook.bids, function(bid){ return parseFloat(bid[0]); })[0];
-
-		if(highestBid > maxClose) {
-			highestBid = maxClose;
-		} else if(highestBid < lastClose) {
-			highestBid = lastClose;
-		}*/
-
 		var highestBid = lastClose;
 
-		var highestBidWithSlippage = tools.round(highestBid * (1 - (this.slippagePercentage / 100)), 2);
+		var highestBidWithSlippage = tools.round(highestBid * (1 - (this.slippagePercentage / 100)), 8);
 
 		this.logger.log('Highest Bid: ' + highestBid + ' Highest Bid With Slippage: ' + highestBidWithSlippage);
 
 		this.orderDetails.price = highestBidWithSlippage;
-		this.orderDetails.amount = tools.round(this.orderDetails.assetBalance - this.tradingReserveAsset, 2);
+		this.orderDetails.amount = tools.round(this.orderDetails.assetBalance - this.tradingReserveAsset, 8);
 
 	}
 

@@ -71,7 +71,7 @@ var endDate;
 
 //------------------------------AnnounceStart
 logger.log('------------------------------------------');
-logger.log('Starting BitBot Back-Tester v0.9.3');
+logger.log('Starting BitBot Back-Tester v0.9.4');
 logger.log('Working Dir = ' + process.cwd());
 logger.log('------------------------------------------');
 //------------------------------AnnounceStart
@@ -80,22 +80,22 @@ var createOrder = function(type, stopLoss) {
 
   var usableBalance = 0;
 
-  if(type === 'buy' && USDBalance !== 0) {
+  if(type === 'buy' && USDBalance > 0) {
 
     entryUSD = USDBalance;
 
-    usableBalance = USDBalance * (1 - (transactionFee / 100));
+    usableBalance = tools.round(USDBalance * (1 - (transactionFee / 100)), 8);
 
-    lastClosePlusSlippage = tools.round(lastClose * (1 + (slippagePercentage / 100)), 2);
+    lastClosePlusSlippage = tools.round(lastClose * (1 + (slippagePercentage / 100)), 8);
 
-    totalTradedVolume = tools.round(totalTradedVolume + usableBalance, 2);
+    totalTradedVolume = tools.round(totalTradedVolume + usableBalance, 8);
 
-    totalFeeCosts = tools.round(totalFeeCosts + (USDBalance * (transactionFee / 100)), 2);
+    totalFeeCosts = tools.round(totalFeeCosts + (USDBalance * (transactionFee / 100)), 8);
 
-    BTCBalance = tools.round(BTCBalance + (usableBalance / lastClosePlusSlippage), 2);
+    BTCBalance = tools.round(BTCBalance + (usableBalance / lastClosePlusSlippage), 8);
     USDBalance = 0;
 
-    var newUSDBalance = tools.round(BTCBalance * lastClosePlusSlippage, 2);
+    var newUSDBalance = tools.round(BTCBalance * lastClosePlusSlippage, 8);
 
     if(newUSDBalance > highestUSDValue) {
       highestUSDValue = newUSDBalance;
@@ -115,17 +115,17 @@ var createOrder = function(type, stopLoss) {
     pricemon.setPosition('bought', lastClosePlusSlippage);
     advisor.setPosition({pos: 'bought', price: lastClosePlusSlippage});
 
-  } else if(type === 'sell' && BTCBalance !== 0) {
+  } else if(type === 'sell' && BTCBalance > 0) {
 
-    usableBalance = BTCBalance * (1 - (transactionFee / 100));
+    usableBalance = tools.round(BTCBalance * (1 - (transactionFee / 100)), 8);
 
-    lastCloseMinusSlippage = tools.round(lastClose * (1 - (slippagePercentage / 100)), 2);
+    lastCloseMinusSlippage = tools.round(lastClose * (1 - (slippagePercentage / 100)), 8);
 
-    totalTradedVolume = tools.round(totalTradedVolume + (usableBalance * lastCloseMinusSlippage), 2);
+    totalTradedVolume = tools.round(totalTradedVolume + (usableBalance * lastCloseMinusSlippage), 8);
 
-    totalFeeCosts = tools.round(totalFeeCosts + (BTCBalance * (transactionFee / 100) * lastCloseMinusSlippage), 2);
+    totalFeeCosts = tools.round(totalFeeCosts + (BTCBalance * (transactionFee / 100) * lastCloseMinusSlippage), 8);
 
-    USDBalance = tools.round(USDBalance + (usableBalance * lastCloseMinusSlippage), 2);
+    USDBalance = tools.round(USDBalance + (usableBalance * lastCloseMinusSlippage), 8);
     BTCBalance = 0;
 
     if(USDBalance > highestUSDValue) {
@@ -138,15 +138,15 @@ var createOrder = function(type, stopLoss) {
 
     if(entryUSD > 0) {
 
-      var tradeResult = tools.round(exitUSD - entryUSD, 2);
+      var tradeResult = tools.round(exitUSD - entryUSD, 8);
 
       if(exitUSD > entryUSD) {
         winners += 1;
-        totalGain = tools.round(totalGain + tradeResult, 2);
+        totalGain = tools.round(totalGain + tradeResult, 8);
         if(tradeResult > bigWinner) {bigWinner = tradeResult;}
       } else {
         losers += 1;
-        totalLoss = tools.round(totalLoss + tradeResult, 2);
+        totalLoss = tools.round(totalLoss + tradeResult, 8);
         if(tradeResult < bigLoser) {bigLoser = tradeResult;}
       }
 
@@ -181,8 +181,8 @@ var calculate = function(err, result) {
 
   if(loopArray.length > 0) {
 
-    initialBalanceSumInBTC = BTCBalance + tools.round(USDBalance / _.first(loopArray).close, 2);
-    initialBalanceSumInUSD = USDBalance + tools.round(BTCBalance * _.first(loopArray).close, 2);
+    initialBalanceSumInBTC = BTCBalance + tools.round(USDBalance / _.first(loopArray).close, 8);
+    initialBalanceSumInUSD = USDBalance + tools.round(BTCBalance * _.first(loopArray).close, 8);
 
     var candleStickSizeSeconds = candleStickSizeMinutes * 60;
 
@@ -244,13 +244,13 @@ var calculate = function(err, result) {
 
 var report = function(firstCs, lastCs) {
 
-  totalBalanceInUSD = tools.round(USDBalance + (BTCBalance * lastClose), 2);
-  totalBalanceInBTC = tools.round(BTCBalance + (USDBalance / lastClose), 2);
-  profit = tools.round(totalBalanceInUSD - initialBalanceSumInUSD, 2);
-  profitPercentage = tools.round(profit / initialBalanceSumInUSD * 100, 2);
-  totalFeeCostsPercentage = tools.round(totalFeeCosts / initialBalanceSumInUSD * 100, 2);
-  bhProfit = tools.round((lastCs.close - firstCs.open) * initialBalanceSumInBTC, 2);
-  bhProfitPercentage = tools.round(bhProfit / initialBalanceSumInUSD * 100, 2);
+  totalBalanceInUSD = tools.round(USDBalance + (BTCBalance * lastClose), 8);
+  totalBalanceInBTC = tools.round(BTCBalance + (USDBalance / lastClose), 8);
+  profit = tools.round(totalBalanceInUSD - initialBalanceSumInUSD, 8);
+  profitPercentage = tools.round(profit / initialBalanceSumInUSD * 100, 8);
+  totalFeeCostsPercentage = tools.round(totalFeeCosts / initialBalanceSumInUSD * 100, 8);
+  bhProfit = tools.round((lastCs.close - firstCs.open) * initialBalanceSumInBTC, 8);
+  bhProfitPercentage = tools.round(bhProfit / initialBalanceSumInUSD * 100, 8);
 
   if(totalBalanceInUSD > highestUSDValue) {
     highestUSDValue = totalBalanceInUSD;
@@ -259,8 +259,8 @@ var report = function(firstCs, lastCs) {
   startDate = moment(new Date(firstCs.period*1000)).format('DD-MM-YYYY HH:mm:ss');
   endDate = moment(new Date(lastCs.period*1000)).format('DD-MM-YYYY HH:mm:ss');
 
-  averageGain = tools.round(totalGain / winners, 2);
-  averageLoss = tools.round(totalLoss / losers, 2);
+  averageGain = tools.round(totalGain / winners, 8);
+  averageLoss = tools.round(totalLoss / losers, 8);
 
   logger.log('----------Report----------');
   logger.log('Exchange: ' + exchange);

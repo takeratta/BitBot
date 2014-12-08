@@ -38,7 +38,7 @@ processor.prototype.updateCandleStick = function (candleStick, tick) {
     candleStick.low = _.min([candleStick.low, tick.price]);
 
     candleStick.volume = tools.round(candleStick.volume + tick.amount, 8);
-    candleStick.vwap = tools.round((currentVwap + newVwap) / candleStick.volume, 2);
+    candleStick.vwap = tools.round((currentVwap + newVwap) / candleStick.volume, 8);
 
   }
 

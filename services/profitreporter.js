@@ -22,12 +22,12 @@ Util.inherits(reporter, EventEmitter);
 reporter.prototype.intialize = function(err, result) {
 
   this.currencyBalance = parseFloat(result.balance.currencyAvailable);
-  this.assetBalance = tools.round(parseFloat(result.balance.assetAvailable), 2);
+  this.assetBalance = tools.round(parseFloat(result.balance.assetAvailable), 8);
 
   this.highestBid = _.first(result.orderBook.bids).currencyPrice;
   this.assetBalanceInCurrency = this.assetBalance * this.highestBid;
 
-  this.initalTotalCurrencyBalance = tools.round(this.currencyBalance + this.assetBalanceInCurrency, 2);
+  this.initalTotalCurrencyBalance = tools.round(this.currencyBalance + this.assetBalanceInCurrency, 8);
 
   this.storage.setInitialBalance(this.initalTotalCurrencyBalance, function(err) {
 
@@ -64,14 +64,14 @@ reporter.prototype.createReport = function() {
 reporter.prototype.processBalance = function(err, result) {
 
   this.currencyBalance = parseFloat(result.balance.currencyAvailable);
-  this.assetBalance = tools.round(parseFloat(result.balance.assetAvailable), 2);
+  this.assetBalance = tools.round(parseFloat(result.balance.assetAvailable), 8);
 
   this.highestBid = _.first(result.orderBook.bids).currencyPrice;
   this.assetBalanceInCurrency = this.assetBalance * this.highestBid;
 
-  this.totalCurrencyBalance = tools.round(this.currencyBalance + this.assetBalanceInCurrency, 2);
+  this.totalCurrencyBalance = tools.round(this.currencyBalance + this.assetBalanceInCurrency, 8);
   this.profitAbsolute = this.totalCurrencyBalance - this.initalTotalCurrencyBalance;
-  this.profitPercentage = tools.round((this.profitAbsolute / this.initalTotalCurrencyBalance) * 100, 2);
+  this.profitPercentage = tools.round((this.profitAbsolute / this.initalTotalCurrencyBalance) * 100, 8);
 
   if(this.includeReport) {
     this.createReport();

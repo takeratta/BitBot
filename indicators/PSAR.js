@@ -23,10 +23,10 @@ var calculatePSAR = function(previousPSAR, previousEP, previousAF, previousTrend
   var temp;
 
   if(previousTrend === 1) {
-    temp = tools.round(previousPSAR + (previousAF * (previousEP - previousPSAR)), 2);
+    temp = tools.round(previousPSAR + (previousAF * (previousEP - previousPSAR)), 8);
     PSAR = _.min([temp, limit]);
   } else if (previousTrend === -1) {
-    temp = tools.round(previousPSAR - (previousAF * (previousPSAR - previousEP)), 2);
+    temp = tools.round(previousPSAR - (previousAF * (previousPSAR - previousEP)), 8);
     PSAR = _.max([temp,limit]);
   }
 
@@ -93,7 +93,7 @@ var calculateAF = function(EP, previousEP, trend, previousTrend, previousAF, AFI
   if(EP !== previousEP) {EPChanged = true;}
 
   if(EPChanged && trend === previousTrend && previousAF < maximumAF) {
-    AF = tools.round(previousAF + AFIncrement, 2);
+    AF = tools.round(previousAF + AFIncrement, 8);
   } else if (trend !== previousTrend) {
     AF = AFIncrement;
   } else {
@@ -116,8 +116,8 @@ indicator.prototype.calculate = function(cs) {
   }
 
   if(!this.firstCandleDone) {
-    this.previousPSAR = tools.round(cs.low, 2);
-    this.previousEP = tools.round(cs.high, 2);
+    this.previousPSAR = tools.round(cs.low, 8);
+    this.previousEP = tools.round(cs.high, 8);
     this.previousAF = this.options.AFIncrement;
     this.previousTrend = 1;
     this.firstCandleDone = true;

@@ -277,7 +277,7 @@ storage.prototype.calculateAggregatedCandleStick = function(period, relevantStic
 	if(currentCandleStick.volume === 0) {
 		currentCandleStick.vwap = currentCandleStick.close;
 	} else {
-		currentCandleStick.vwap = tools.round(_.reduce(relevantSticks, function(memo, entry) { return memo + (entry.vwap * entry.volume); }, 0) / currentCandleStick.volume, 2);
+		currentCandleStick.vwap = tools.round(_.reduce(relevantSticks, function(memo, entry) { return memo + (entry.vwap * entry.volume); }, 0) / currentCandleStick.volume, 8);
 	}
 
 	return currentCandleStick;
