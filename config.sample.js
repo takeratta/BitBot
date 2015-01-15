@@ -17,10 +17,11 @@ config.exchangeSettings = {
 	// For BTC-E look up the currency pairs in their API: https://btc-e.com/api/3/info
 	// BTC-E Example: {pair: 'BTC_USD', asset: 'BTC', currency: 'USD'}
 	tradingReserveAsset: 0,
-	// Enter an amount of "asset" you would like to freeze (not trade)
+	// Enter an amount of "asset" you would like to freeze (not trade).
 	tradingReserveCurrency: 0,
-	// Enter an amount of "currency" you would like to freeze (not trade)
+	// Enter an amount of "currency" you would like to freeze (not trade).
 	slippagePercentage: 0.1
+	// Percentage to sell below and buy above the market.
 };
 //------------------------------exchangeSettings
 
@@ -34,23 +35,23 @@ config.apiSettings = {
 
 //------------------------------dbSettings
 config.mongoConnectionString = 'localhost/bitbot';
-// The connection string for your MongoDB Installation
+// The connection string for your MongoDB Installation.
 // Example: config.mongoConnectionString = 'username:password@example.com/mydb';
 config.resetInitialBalances = false;
-// Set this to true if you want to reset the initialBalance stored by the bot
+// Set this to true if you want to reset the initialBalance stored by the bot.
 //------------------------------dbSettings
 
 //------------------------------downloaderSettings
 config.downloaderRefreshSeconds = 10;
-// Best to keep this default setting unless you know what you are doing
+// Best to keep this default setting unless you know what you are doing.
 //------------------------------downloaderSettings
 
 //------------------------------IndicatorSettings
 config.indicatorSettings = {
 	indicator: 'MACD',
-	// Choices: Any indicator from the indicators folder
+	// Choices: Any indicator from the indicators folder.
 	options: {neededPeriods: 26, shortPeriods: 12, longPeriods: 26, emaPeriods: 9, buyTreshold: 0, sellTreshold: 0},
-	// Options needed for your indicator (Look them up in the indicator's file)
+	// Options needed for your indicator (Look them up in the indicator's file).
 	candleStickSizeMinutes: 5
 };
 //------------------------------IndicatorSettings
@@ -59,25 +60,17 @@ config.indicatorSettings = {
 config.orderKeepAliveMinutes = config.indicatorSettings.candleStickSizeMinutes / 10;
 //------------------------------orderSettings
 
-//------------------------------stopLossSettings
-config.stoplossSettings = {
-	enabled: false,
-	percentageBought: 1,
-	percentageSold: 1
-};
-//------------------------------stopLossSettings
-
 //------------------------------PushOver
 config.pushOver = {
 	enabled: false,
 	pushUserId: '',
 	pushAppToken: ''
 };
-// You can receive push notifications using pushover if you fill in these settings (https://pushover.net/).
+// Push notifications via pushover (https://pushover.net/).
 //------------------------------PushOver
 
 //------------------------------BackTesting
-config.backTesting = {
+config.backTesterSettings = {
 	initialAssetBalance: 0,
 	initialCurrencyBalance: 10000
 };

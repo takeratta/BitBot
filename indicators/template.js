@@ -1,5 +1,6 @@
 //-------------------- REMOVE THIS BLOCK
-console.log('If you want this code to do anything, remove this code block!');
+var err = new Error('If you want this code to do anything, remove this code block!');
+this.logger.error(err.stack);
 process.exit();
 //-------------------- REMOVE THIS BLOCK
 
@@ -12,6 +13,12 @@ var indicator = function(options) {
   this.position = {};
 
   _.bindAll(this, 'calculate', 'setPosition');
+
+  if(!'option' in options) {
+    var err = new Error('Invalid options for indicator, exiting.');
+    this.logger.error(err.stack);
+    process.exit();
+  }
 
   // indicatorOptions
   // options: {The options required for your indicator to work}

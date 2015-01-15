@@ -1,5 +1,6 @@
 //-------------------- REMOVE THIS BLOCK
-console.log('If you want this code to do anything, remove this code block!');
+var err = new Error('If you want this code to do anything, remove this code block!');
+this.logger.error(err.stack);
 process.exit();
 //-------------------- REMOVE THIS BLOCK
 
@@ -15,8 +16,7 @@ var exchange = function(currencyPair, apiSettings, logger) {
   this.q = async.queue(function (task, callback) {
     this.logger.debug('Added ' + task.name + ' API call to the queue.');
     this.logger.debug('There are currently ' + this.q.running() + ' running jobs and ' + this.q.length() + ' jobs in queue.');
-    task.func();
-    setTimeout(callback,2000);
+    task.func(function() { setTimeout(callback, 2000); });
   }.bind(this), 1);
 
   this.logger = logger;
@@ -84,9 +84,11 @@ exchange.prototype.getTrades = function(retry, cb) {
 
   var args = arguments;
 
-  var wrapper = function() {
+  var wrapper = function(finish) {
 
     var handler = function(err, response) {
+
+      finish();
 
       cb(null, [{date: timestamp, price: number, amount: number}]);
 
@@ -105,9 +107,11 @@ exchange.prototype.getBalance = function(retry, cb) {
 
   var args = arguments;
 
-  var wrapper = function() {
+  var wrapper = function(finish) {
 
     var handler = function(err, response) {
+
+      finish();
 
       cb(null, {currencyAvailable: number, assetAvailable: number, fee: number});
 
@@ -126,9 +130,11 @@ exchange.prototype.getOrderBook = function(retry, cb) {
 
   var args = arguments;
 
-  var wrapper = function() {
+  var wrapper = function(finish) {
 
     var handler = function(err, response) {
+
+      finish();
 
       cb(null, {bids: [{assetAmount: number, currencyPrice: number}], asks: [{assetAmount: number, currencyPrice: number}]});
 
@@ -147,9 +153,11 @@ exchange.prototype.placeOrder = function(type, amount, price, retry, cb) {
 
   var args = arguments;
 
-  var wrapper = function() {
+  var wrapper = function(finish) {
 
     var handler = function(err, response) {
+
+      finish();
 
       cb(null, {txid: transaction_id, status: 'open'});
 
@@ -168,9 +176,11 @@ exchange.prototype.orderFilled = function(order, retry, cb) {
 
   var args = arguments;
 
-  var wrapper = function() {
+  var wrapper = function(finish) {
 
     var handler = function(err, response) {
+
+      finish();
 
       cb(null, boolean);
 
@@ -189,9 +199,11 @@ exchange.prototype.cancelOrder = function(order, retry, cb) {
 
   var args = arguments;
 
-  var wrapper = function() {
+  var wrapper = function(finish) {
 
     var handler = function(err, response) {
+
+      finish();
 
       cb(null, boolean);
 

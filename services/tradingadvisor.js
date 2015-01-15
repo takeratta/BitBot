@@ -9,24 +9,36 @@ var advisor = function(indicatorSettings, backTesting, storage, logger) {
 	this.storage = storage;
 	this.logger = logger;
 
-	if(fs.existsSync('./indicators/' + indicatorSettings.indicator + '.js')) {
-		var indicator = require('../indicators/' + indicatorSettings.indicator + '.js');
-		this.selectedIndicator = new indicator(indicatorSettings.options);
-	} else {
+	try {
+
+		this.indicators = {};
+
+		fs.readdirSync('./indicators/').forEach(function(file) {
+			if(file != 'template.js' && file.indexOf('.') > 0 && file.indexOf('.js') > 0) {
+				var indicator = require('../indicators/' + file);
+				this.indicators[file.replace('.js', '')] = indicator;
+			}
+		}.bind(this));
+
+		this.selectedIndicator = new this.indicators[indicatorSettings.indicator](indicatorSettings.options);
+
+	} catch(err) {
+
 		var err = new Error('Wrong indicator chosen. This indicator doesn\'t exist.');
 		this.logger.error(err.stack);
 		process.exit();
+
 	}
 
-	_.bindAll(this, 'start', 'update', 'setPosition');
+	_.bindAll(this, 'start', 'update', 'setPosition', 'setIndicator');
 
 };
 
-//---EventEmitter Setup
+/*//---EventEmitter Setup
 var Util = require('util');
 var EventEmitter = require('events').EventEmitter;
 Util.inherits(advisor, EventEmitter);
-//---EventEmitter Setup
+//---EventEmitter Setup*/
 
 advisor.prototype.start = function() {
 
@@ -53,7 +65,8 @@ advisor.prototype.update = function(cs) {
 	}
 
 	if(['buy', 'sell', 'hold'].indexOf(result.advice) >= 0) {
-		this.emit('advice', result.advice);
+		//this.emit('advice', result.advice);
+		return result.advice;
 	} else {
 		var err = new Error('Invalid advice from indicator, should be either: buy, sell or hold.');
 		this.logger.error(err.stack);
@@ -65,6 +78,12 @@ advisor.prototype.update = function(cs) {
 advisor.prototype.setPosition = function(pos) {
 
 	this.selectedIndicator.setPosition(pos);
+
+};
+
+advisor.prototype.setIndicator = function(indicatorSettings) {
+
+	this.selectedIndicator = new this.indicators[indicatorSettings.indicator](indicatorSettings.options);
 
 };
 

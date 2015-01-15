@@ -12,6 +12,12 @@ var indicator = function(options) {
 
   _.bindAll(this, 'calculate', 'setPosition');
 
+  if(!'neededPeriods' in options || !'longPeriods' in options || !'shortPeriods' in options || !'emaPeriods' in options || !'buyTreshold' in options || !'sellTreshold' in options) {
+    var err = new Error('Invalid options for MACD indicator, exiting.');
+    this.logger.error(err.stack);
+    process.exit();
+  }
+
   // indicatorOptions
   // options: {neededPeriods: number, longPeriods: number, shortPeriods: number, emaPeriods: number, buyTreshold: number, sellTreshold: number}
 

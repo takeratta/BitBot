@@ -1,17 +1,6 @@
 var _ = require('underscore');
 
 var loggingservice = require('./services/loggingservice.js');
-var storageservice = require('./services/storage.js');
-var exchangeapiservice = require('./services/exchangeapi.js');
-var dataretriever = require('./services/dataretriever.js');
-var dataprocessor = require('./services/dataprocessor.js');
-var candleaggregator = require('./services/candleaggregator');
-var tradingadvisor = require('./services/tradingadvisor.js');
-var tradingagent = require('./services/tradingagent.js');
-var pushservice = require('./services/pushservice.js');
-var ordermonitor = require('./services/ordermonitor.js');
-var profitreporter = require('./services/profitreporter.js');
-var pricemonitor = require('./services/pricemonitor');
 
 //------------------------------Config
 var config = require('./config.js');
@@ -19,178 +8,71 @@ var config = require('./config.js');
 
 //------------------------------IntializeModules
 var logger = new loggingservice('app', config.debug);
-var storage = new storageservice(config.exchangeSettings, config.mongoConnectionString, logger);
-var exchangeapi = new exchangeapiservice(config.exchangeSettings, config.apiSettings, logger);
-var retriever = new dataretriever(config.downloaderRefreshSeconds, exchangeapi, logger);
-var processor = new dataprocessor(storage, logger);
-var aggregator = new candleaggregator(config.indicatorSettings.candleStickSizeMinutes, storage, logger);
-var advisor = new tradingadvisor(config.indicatorSettings, false, storage, logger);
-var agent = new tradingagent(config.tradingEnabled, config.exchangeSettings, storage, exchangeapi, logger);
-var pusher = new pushservice(config.pushOver, logger);
-var monitor = new ordermonitor(exchangeapi, logger);
-var reporter = new profitreporter(config.exchangeSettings.currencyPair, storage, exchangeapi, logger);
-var pricemon = new pricemonitor(config.stoplossSettings.percentageBought, config.stoplossSettings.percentageSold, config.indicatorSettings.candleStickSizeMinutes, storage, logger);
 //------------------------------IntializeModules
 
-retriever.on('update', function(ticks){
+//------------------------------AnnounceStart
+logger.log('----------------------------------------------------');
+logger.log('Starting BitBot v0.9.5');
+logger.log('Real Trading Enabled = ' + config.tradingEnabled);
+logger.log('Working Dir = ' + process.cwd());
+logger.log('----------------------------------------------------');
+//------------------------------AnnounceStart
 
-    processor.updateCandleDB(ticks);
+var app = function() {
 
-});
+  _.bindAll(this, 'appListener', 'launchTrader', 'launchBacktester', 'start');
 
-processor.on('initialDBWrite', function(){
+};
 
-    reporter.start(config.resetInitialBalances);
+app.prototype.appListener = function() {
 
-    advisor.start();
+  this.app.on('done', function() {
+    logger.log('App closed.');
+  }.bind(this));
 
-});
+};
 
-processor.on('update', function(cs){
+app.prototype.launchTrader = function() {
 
-    if(config.stoplossSettings.enabled) {
+  this.createCluster();
+  logger.log('----------------------------------------------------');
+  logger.log('Launching trader module.');
+  logger.log('----------------------------------------------------');
+  this.app = require('./apps/trader.js');
+  this.appListener();
+  this.app.start();
 
-        pricemon.check(cs.close);
+}
 
-    }
+app.prototype.launchBacktester = function() {
 
-    aggregator.update();
+  this.createCluster();
+  logger.log('----------------------------------------------------');
+  logger.log('Launching backtester module.');
+  logger.log('----------------------------------------------------');
+  this.app = require('./apps/backtester.js');
+  this.appListener();
+  this.app.start();
 
-});
+}
 
-aggregator.on('update', function(cs){
+app.prototype.start = function() {
 
-    if(config.stoplossSettings.enabled) {
+  var argument = process.argv[2];
 
-        pricemon.update(cs, function(err) {
-
-          advisor.update(cs, false);
-
-        });
-
+  if(!argument) {
+    this.launchTrader();
+  } else {
+    if(argument === '-b') {
+      this.launchBacktester();
     } else {
-
-      advisor.update(cs, false);
-
+      logger.log('Invalid argument, supported options:');
+      logger.log('-b: Launch Backtester');
     }
-
-});
-
-advisor.on('advice', function(advice){
-
-    if(advice === 'buy') {
-
-        agent.order(advice);
-
-    } else if(advice === 'sell') {
-
-        agent.order(advice);
-
-    }
-
-});
-
-agent.on('realOrder',function(orderDetails){
-
-    if(config.pushOver.enabled) {
-        pusher.send('BitBot - Order Placed!', 'Placed ' + orderDetails.orderType + ' order: (' + orderDetails.amount + '@' + orderDetails.price + ')', 'magic', 1);
-    }
-
-    monitor.add(orderDetails, config.orderKeepAliveMinutes);
-
-});
-
-agent.on('simulatedOrder',function(orderDetails){
-
-    if(config.pushOver.enabled) {
-        pusher.send('BitBot - Order Simulated!', 'Simulated ' + orderDetails.orderType + ' order: (' + orderDetails.amount + '@' + orderDetails.price + ')', 'magic', 1);
-    }
-
-    monitor.add(orderDetails, config.orderKeepAliveMinutes);
-
-});
-
-monitor.on('filled', function(order) {
-
-    if(order.orderDetails.orderType === 'buy') {
-
-        pricemon.setPosition('bought', order.orderDetails.price);
-        advisor.setPosition({pos: 'bought', price: order.orderDetails.price});
-
-    } else if(order.orderDetails.orderType === 'sell') {
-
-        pricemon.setPosition('sold', order.orderDetails.price);
-        advisor.setPosition({pos: 'sold', price: order.orderDetails.price});
-
-    }
-
-    reporter.updateBalance(true);
-
-});
-
-monitor.on('cancelled', function(order, retry) {
-
-    reporter.updateBalance(false);
-
-    if(retry) {
-
-      cancelledOrderRetryTimeout = setTimeout(function(){
-
-          agent.order(order.orderDetails.orderType);
-
-      }, 1000 * 5);
-
-    }
-
-});
-
-pricemon.on('advice', function(advice) {
-
-    if(advice === 'buy') {
-
-        agent.order(advice);
-
-    } else if(advice === 'sell') {
-
-        agent.order(advice);
-
-    }
-
-});
-
-reporter.on('report', function(report){
-
-    if(config.pushOver.enabled) {
-        pusher.send('BitBot - Profit Report!', report, 'magic', 1);
-    }
-
-});
-
-var start = function() {
-
-  //------------------------------AnnounceStart
-  logger.log('------------------------------------------');
-  logger.log('Starting BitBot v0.9.4');
-  logger.log('Real Trading Enabled = ' + config.tradingEnabled);
-  logger.log('Working Dir = ' + process.cwd());
-  logger.log('------------------------------------------');
-  //------------------------------AnnounceStart
-
-  retriever.start();
+  }
 
 };
 
-var stop = function(cb) {
+var application = new app();
 
-  retriever.stop();
-
-  clearTimeout(cancelledOrderRetryTimeout);
-
-  monitor.resolvePreviousOrder(function(){
-    logger.log('BitBot stopped succesfully!');
-    cb();
-  });
-
-};
-
-start();
+application.start();

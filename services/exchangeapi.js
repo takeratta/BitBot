@@ -7,13 +7,25 @@ var api = function(exchangeSettings, apiSettings, logger) {
   this.currencyPair = exchangeSettings.currencyPair;
   this.logger = logger;
 
-  if(fs.existsSync('./exchanges/' + this.exchange + '.js')) {
-    var Exchange = require('../exchanges/' + this.exchange + '.js');
-    this.selectedExchange = new Exchange(this.currencyPair, apiSettings[this.exchange], logger);
-  } else {
+  try {
+
+    this.exchanges = {};
+
+    fs.readdirSync('./exchanges/').forEach(function(file) {
+      if(file != 'template.js' && file.indexOf('.') > 0 && file.indexOf('.js') > 0) {
+        var exchange = require('../exchanges/' + file);
+        this.exchanges[file.replace('.js', '')] = exchange;
+      }
+    }.bind(this));
+
+    this.selectedExchange = new this.exchanges[this.exchange](this.currencyPair, apiSettings[this.exchange], this.logger);
+
+  } catch(err) {
+
     var err = new Error('Wrong exchange chosen. This exchange doesn\'t exist.');
     this.logger.error(err.stack);
     process.exit();
+
   }
 
   _.bindAll(this, 'getTrades', 'getBalance', 'getOrderBook', 'placeOrder', 'orderFilled' ,'cancelOrder');

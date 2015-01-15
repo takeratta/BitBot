@@ -57,20 +57,20 @@ agent.prototype.calculateOrder = function(result) {
 
 	this.orderDetails.assetBalance = parseFloat(result.balance.assetAvailable);
 	this.orderDetails.currencyBalance = parseFloat(result.balance.currencyAvailable);
-	this.orderDetails.tradingFee = parseFloat(result.balance.fee);
+	this.orderDetails.transactionFee = parseFloat(result.balance.fee);
 
 	var orderBook = result.orderBook;
 
 	var lastClose = result.lastClose;
 
-	this.logger.log('Preparing to place a ' + this.orderDetails.orderType + ' order! (' + this.currencyPair.asset + ' Balance: ' + this.orderDetails.assetBalance + ' ' + this.currencyPair.currency + ' Balance: ' + this.orderDetails.currencyBalance + ' Trading Fee: ' + this.orderDetails.tradingFee +')');
+	this.logger.log('Preparing to place a ' + this.orderDetails.orderType + ' order! (' + this.currencyPair.asset + ' Balance: ' + this.orderDetails.assetBalance + ' ' + this.currencyPair.currency + ' Balance: ' + this.orderDetails.currencyBalance + ' Trading Fee: ' + this.orderDetails.transactionFee +')');
 
 	if(this.orderDetails.orderType === 'buy') {
 
 		var lowestAsk = lastClose;
 
 		var lowestAskWithSlippage = tools.round(lowestAsk * (1 + (this.slippagePercentage / 100)), 8);
-		var balance = (this.orderDetails.currencyBalance - this.tradingReserveCurrency) * (1 - (this.orderDetails.tradingFee / 100));
+		var balance = (this.orderDetails.currencyBalance - this.tradingReserveCurrency) * (1 - (this.orderDetails.transactionFee / 100));
 
 		this.logger.log('Lowest Ask: ' + lowestAsk + ' Lowest Ask With Slippage: ' + lowestAskWithSlippage);
 
@@ -116,7 +116,7 @@ agent.prototype.placeSimulatedOrder = function() {
 
 		this.orderDetails.order = 'Simulated';
 
-		this.orderDetails.status = order.status;
+		this.orderDetails.status = 'open';
 
 		this.logger.log('Placed simulated ' + this.orderDetails.orderType + ' order: (' + this.orderDetails.amount + '@' + this.orderDetails.price + ')');
 

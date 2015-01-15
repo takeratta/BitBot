@@ -11,8 +11,7 @@ var exchange = function(currencyPair, apiSettings, logger) {
   this.q = async.queue(function (task, callback) {
     this.logger.debug('Added ' + task.name + ' API call to the queue.');
     this.logger.debug('There are currently ' + this.q.running() + ' running jobs and ' + this.q.length() + ' jobs in queue.');
-    task.func();
-    setTimeout(callback,2000);
+    task.func(function() { setTimeout(callback, 2000); });
   }.bind(this), 1);
 
   this.logger = logger;
@@ -80,11 +79,13 @@ exchange.prototype.getTrades = function(retry, cb) {
 
   var args = arguments;
 
-  var wrapper = function() {
+  var wrapper = function(finish) {
 
     var pair = this.currencyPair.pair;
 
     var handler = function(err, response) {
+
+      finish();
 
       if(!err) {
 
@@ -118,7 +119,7 @@ exchange.prototype.getBalance = function(retry, cb) {
 
   var args = arguments;
 
-  var wrapper = function() {
+  var wrapper = function(finish) {
 
     var asset = this.currencyPair.asset;
     var currency = this.currencyPair.currency;
@@ -126,6 +127,8 @@ exchange.prototype.getBalance = function(retry, cb) {
     var pair = this.currencyPair.pair;
 
     var handler = function(err, result) {
+
+      finish();
 
       if(!err) {
 
@@ -151,11 +154,13 @@ exchange.prototype.getOrderBook = function(retry, cb) {
 
   var args = arguments;
 
-  var wrapper = function () {
+  var wrapper = function (finish) {
 
     var pair = this.currencyPair.pair;
 
     var handler = function(err, result) {
+
+      finish();
 
       if(!err) {
 
@@ -189,11 +194,13 @@ exchange.prototype.placeOrder = function(type, amount, price, retry, cb) {
 
   var args = arguments;
 
-  var wrapper = function() {
+  var wrapper = function(finish) {
 
     var pair = this.currencyPair.pair;
 
     var handler = function(err, result) {
+
+      finish();
 
       if(!err) {
 
@@ -239,9 +246,11 @@ exchange.prototype.orderFilled = function(order, retry, cb) {
 
   var args = arguments;
 
-  var wrapper = function() {
+  var wrapper = function(finish) {
 
     var handler = function(err, result) {
+
+      finish();
 
       if(!err) {
 
@@ -285,9 +294,11 @@ exchange.prototype.cancelOrder = function(order, retry, cb) {
 
     if(!filled && !err) {
 
-      var wrapper = function() {
+      var wrapper = function(finish) {
 
         var handler = function(err, result) {
+
+          finish();
 
           if(!err) {
 

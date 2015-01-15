@@ -10,6 +10,12 @@ var indicator = function(options) {
 
   _.bindAll(this, 'calculate', 'setPosition');
 
+  if(!'AFIncrement' in options || !'maximumAF' in options) {
+    var err = new Error('Invalid options for PSAR indicator, exiting.');
+    this.logger.error(err.stack);
+    process.exit();
+  }
+
   // indicatorOptions
   // options: {AFIncrement: number, maximumAF: number}
 
