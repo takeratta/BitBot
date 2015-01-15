@@ -34,7 +34,6 @@ app.prototype.appListener = function() {
 
 app.prototype.launchTrader = function() {
 
-  this.createCluster();
   logger.log('----------------------------------------------------');
   logger.log('Launching trader module.');
   logger.log('----------------------------------------------------');
@@ -46,7 +45,6 @@ app.prototype.launchTrader = function() {
 
 app.prototype.launchBacktester = function() {
 
-  this.createCluster();
   logger.log('----------------------------------------------------');
   logger.log('Launching backtester module.');
   logger.log('----------------------------------------------------');
