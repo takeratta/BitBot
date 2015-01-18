@@ -43,13 +43,15 @@ exchange.prototype.retry = function(method, args) {
 
 };
 
-exchange.prototype.errorHandler = function(caller, receivedArgs, retryAllowed, callerName, handler) {
+exchange.prototype.errorHandler = function(caller, receivedArgs, retryAllowed, callerName, handler, finished) {
 
   return function(err, result) {
 
     var args = _.toArray(receivedArgs);
 
     var parsedError = null;
+
+    finished();
 
     if(err) {
 
@@ -84,18 +86,16 @@ exchange.prototype.getTrades = function(retry, cb) {
 
   var args = arguments;
 
-  var wrapper = function(finish) {
+  var wrapper = function(finished) {
 
     var handler = function(err, response) {
-
-      finish();
 
       cb(null, [{date: timestamp, price: number, amount: number}]);
 
     };
 
     // Pass this as callback to your exchange function (Expects an Err, Result output).
-    this.errorHandler(this.getTrades, args, retry, 'getTrades', handler);
+    this.errorHandler(this.getTrades, args, retry, 'getTrades', handler, finished);
 
   }.bind(this);
 
@@ -107,18 +107,16 @@ exchange.prototype.getBalance = function(retry, cb) {
 
   var args = arguments;
 
-  var wrapper = function(finish) {
+  var wrapper = function(finished) {
 
     var handler = function(err, response) {
-
-      finish();
 
       cb(null, {currencyAvailable: number, assetAvailable: number, fee: number});
 
     };
 
     // Pass this as callback to your exchange function (Expects an Err, Result output).
-    this.errorHandler(this.getBalance, args, retry, 'getBalance', handler);
+    this.errorHandler(this.getBalance, args, retry, 'getBalance', handler, finished);
 
   }.bind(this);
 
@@ -130,18 +128,16 @@ exchange.prototype.getOrderBook = function(retry, cb) {
 
   var args = arguments;
 
-  var wrapper = function(finish) {
+  var wrapper = function(finished) {
 
     var handler = function(err, response) {
-
-      finish();
 
       cb(null, {bids: [{assetAmount: number, currencyPrice: number}], asks: [{assetAmount: number, currencyPrice: number}]});
 
     };
 
     // Pass this as callback to your exchange function (Expects an Err, Result output).
-    this.errorHandler(this.getOrderBook, args, retry, 'getOrderBook', handler);
+    this.errorHandler(this.getOrderBook, args, retry, 'getOrderBook', handler, finished);
 
   }.bind(this);
 
@@ -153,18 +149,16 @@ exchange.prototype.placeOrder = function(type, amount, price, retry, cb) {
 
   var args = arguments;
 
-  var wrapper = function(finish) {
+  var wrapper = function(finished) {
 
     var handler = function(err, response) {
-
-      finish();
 
       cb(null, {txid: transaction_id, status: 'open'});
 
     };
 
     // Pass this as callback to your exchange function (Expects an Err, Result output).
-    this.errorHandler(this.placeOrder, args, retry, 'placeOrder', handler);
+    this.errorHandler(this.placeOrder, args, retry, 'placeOrder', handler, finished);
 
   }.bind(this);
 
@@ -176,18 +170,16 @@ exchange.prototype.orderFilled = function(order, retry, cb) {
 
   var args = arguments;
 
-  var wrapper = function(finish) {
+  var wrapper = function(finished) {
 
     var handler = function(err, response) {
-
-      finish();
 
       cb(null, boolean);
 
     };
 
     // Pass this as callback to your exchange function (Expects an Err, Result output).
-    this.errorHandler(this.orderFilled, args, retry, 'orderFilled', handler);
+    this.errorHandler(this.orderFilled, args, retry, 'orderFilled', handler, finished);
 
   }.bind(this);
 
@@ -199,18 +191,16 @@ exchange.prototype.cancelOrder = function(order, retry, cb) {
 
   var args = arguments;
 
-  var wrapper = function(finish) {
+  var wrapper = function(finished) {
 
     var handler = function(err, response) {
-
-      finish();
 
       cb(null, boolean);
 
     };
 
     // Pass this as callback to your exchange function (Expects an Err, Result output).
-    this.errorHandler(this.cancelOrder, args, retry, 'cancelOrder', handler);
+    this.errorHandler(this.cancelOrder, args, retry, 'cancelOrder', handler, finished);
 
   }.bind(this);
 

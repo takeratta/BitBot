@@ -3,7 +3,13 @@ var _ = require('underscore');
 var winston = require('winston');
 var fs = require('fs');
 
-var logger = function(app, debug) {
+var logger = function(app, debug, prefix) {
+
+  if(prefix) {
+    this.prefix = prefix + ': ';
+  } else {
+    this.prefix = '';
+  }
 
   this.debugEnabled = debug;
 
@@ -44,7 +50,7 @@ var logger = function(app, debug) {
 
 logger.prototype.log = function(message) {
 
-  this.logger.log('INFO', message);
+  this.logger.log('INFO', this.prefix + message);
 
 };
 
@@ -52,7 +58,7 @@ logger.prototype.debug = function(message) {
 
   if(this.debugEnabled) {
 
-    this.logger.log('DEBUG', message);
+    this.logger.log('DEBUG', this.prefix + message);
 
   }
 
@@ -60,7 +66,7 @@ logger.prototype.debug = function(message) {
 
 logger.prototype.error = function(message) {
 
-  this.logger.log('ERROR', message);
+  this.logger.log('ERROR', this.prefix + message);
 
 };
 

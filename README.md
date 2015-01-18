@@ -120,6 +120,10 @@ If you would like to simulate trading on your collected data, execute:
 
 	node app.js -b
 
+If you would like to reset the initial balance (profit reports are based against this value), execute:
+
+    node app.js -rb
+
 Remember the backtester simulates your trading strategy on the data you collected. So the longer you keep the bot (app.js) running, the more significant the results of the backtester.
 
 ## Profitability

@@ -12,17 +12,19 @@ var simulatorservice = require('../services/simulator.js');
 var config = require('../config.js');
 //------------------------------Config
 
-//------------------------------IntializeModules
+//------------------------------InitializeModules
 var logger = new loggingservice('backtester', config.debug);
 var storage = new storageservice(config.exchangeSettings, config.mongoConnectionString, logger);
 var exchangeapi = new exchangeapiservice(config.exchangeSettings, config.apiSettings, logger);
-var advisor = new tradingadvisor(config.indicatorSettings, true, storage, logger);
+var advisor = new tradingadvisor(config.indicatorSettings, storage, logger);
 var simulator = new simulatorservice(config.exchangeSettings, config.backTesterSettings, config.indicatorSettings, advisor, logger);
-//------------------------------IntializeModules
+//------------------------------InitializeModules
 
 var backtester = function() {
 
-  _.bindAll(this, 'start');
+  this.indicatorSettings = config.indicatorSettings;
+
+  _.bindAll(this, 'run', 'start');
 
 };
 
@@ -32,19 +34,30 @@ var EventEmitter = require('events').EventEmitter;
 Util.inherits(backtester, EventEmitter);
 //---EventEmitter Setup
 
-backtester.prototype.start = function() {
+backtester.prototype.run = function() {
+
+  advisor.setIndicator(this.indicatorSettings, false);
+
   async.series(
-    {
-      balance: function(cb) {exchangeapi.getBalance(true, cb);},
-      aggregatedCandleSticks: function(cb) {storage.getAggregatedCandleSticks(config.indicatorSettings.candleStickSizeMinutes, cb);}
-    }, function(err, result) {
-      if(result.aggregatedCandleSticks.length > 0) {
-        var result = simulator.calculate(result.aggregatedCandleSticks, result.balance.fee);
-        simulator.report();
-        this.emit('done');
-      }
-    }.bind(this)
+      {
+        balance: function(cb) {exchangeapi.getBalance(true, cb);},
+        aggregatedCandleSticks: function(cb) {storage.getAggregatedCandleSticks(this.indicatorSettings.candleStickSizeMinutes, cb);}.bind(this)
+      }, function(err, result) {
+        if(result.aggregatedCandleSticks.length > 0) {
+          simulator.calculate(result.aggregatedCandleSticks, result.balance.fee, this.indicatorSettings, function(result) {
+            simulator.report();
+            this.emit('done');
+          }.bind(this));
+        }
+      }.bind(this)
   );
+
+};
+
+backtester.prototype.start = function() {
+
+  this.run();
+
 };
 
 var backtesterApp = new backtester();

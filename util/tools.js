@@ -44,7 +44,31 @@ tools.prototype.rangeToArray = function(range) {
 
   return result;
 
-}
+};
+
+tools.prototype.runEvery = function(ms, func) {
+
+  var timeout;
+
+  var loopFunc = function() {
+
+    var now = new Date().getTime();
+    var next = (now - (now % ms) + ms) - now;
+
+    timeout = setTimeout(func, next);
+
+  };
+
+  loopFunc();
+
+  var interval = setInterval(loopFunc, ms);
+
+  return function() {
+    clearInterval(interval);
+    clearTimeout(timeout);
+  };
+
+};
 
 var utiltools = new tools();
 

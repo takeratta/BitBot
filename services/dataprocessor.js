@@ -152,11 +152,7 @@ processor.prototype.createCandleSticks = function(ticks, callback) {
 
         }
 
-        async.eachSeries(toBePushed, function(candleStick, nextPush) {
-
-          this.storage.push(candleStick, nextPush);
-
-        }.bind(this), callback);
+        this.storage.push(toBePushed, callback);
 
       }.bind(this));
 

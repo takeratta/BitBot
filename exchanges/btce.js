@@ -38,13 +38,15 @@ exchange.prototype.retry = function(method, args) {
 
 };
 
-exchange.prototype.errorHandler = function(caller, receivedArgs, retryAllowed, callerName, handler) {
+exchange.prototype.errorHandler = function(caller, receivedArgs, retryAllowed, callerName, handler, finished) {
 
   return function(err, result) {
 
     var args = _.toArray(receivedArgs);
 
     var parsedError = null;
+
+    finished();
 
     if(err) {
 
@@ -79,13 +81,11 @@ exchange.prototype.getTrades = function(retry, cb) {
 
   var args = arguments;
 
-  var wrapper = function(finish) {
+  var wrapper = function(finished) {
 
     var pair = this.currencyPair.pair.toLowerCase();
 
     var handler = function(err, response) {
-
-      finish();
 
       if(!err) {
 
@@ -105,7 +105,7 @@ exchange.prototype.getTrades = function(retry, cb) {
 
     };
 
-    this.btce.trades(pair, this.errorHandler(this.getTrades, args, retry, 'getTrades', handler));
+    this.btce.trades(pair, this.errorHandler(this.getTrades, args, retry, 'getTrades', handler, finished));
 
   }.bind(this);
 
@@ -117,14 +117,12 @@ exchange.prototype.getBalance = function(retry, cb) {
 
   var args = arguments;
 
-  var wrapper = function(finish) {
+  var wrapper = function(finished) {
 
     var asset = this.currencyPair.asset.toLowerCase();
     var currency = this.currencyPair.currency.toLowerCase();
 
     var handler = function(err, response) {
-
-      finish();
 
       if(!err) {
 
@@ -138,7 +136,7 @@ exchange.prototype.getBalance = function(retry, cb) {
 
     };
 
-    this.btce.getInfo(this.errorHandler(this.getBalance, args, retry, 'getBalance', handler));
+    this.btce.getInfo(this.errorHandler(this.getBalance, args, retry, 'getBalance', handler, finished));
 
   }.bind(this);
 
@@ -150,13 +148,11 @@ exchange.prototype.getOrderBook = function(retry, cb) {
 
   var args = arguments;
 
-  var wrapper = function(finish) {
+  var wrapper = function(finished) {
 
     var pair = this.currencyPair.pair.toLowerCase();
 
     var handler = function(err, response) {
-
-      finish();
 
       if(!err) {
 
@@ -178,7 +174,7 @@ exchange.prototype.getOrderBook = function(retry, cb) {
 
     };
 
-    this.btce.depth(pair, this.errorHandler(this.getOrderBook, args, retry, 'getOrderBook', handler));
+    this.btce.depth(pair, this.errorHandler(this.getOrderBook, args, retry, 'getOrderBook', handler, finished));
 
   }.bind(this);
 
@@ -190,13 +186,11 @@ exchange.prototype.placeOrder = function(type, amount, price, retry, cb) {
 
   var args = arguments;
 
-  var wrapper = function(finish) {
+  var wrapper = function(finished) {
 
     var pair = this.currencyPair.pair.toLowerCase();
 
     var handler = function(err, response) {
-
-      finish();
 
       if(!err) {
 
@@ -220,11 +214,11 @@ exchange.prototype.placeOrder = function(type, amount, price, retry, cb) {
 
     if(type === 'buy') {
 
-      this.btce.trade(pair, 'buy', price, amount, this.errorHandler(this.placeOrder, args, retry, 'placeOrder', handler));
+      this.btce.trade(pair, 'buy', price, amount, this.errorHandler(this.placeOrder, args, retry, 'placeOrder', handler, finished));
 
     } else if (type === 'sell') {
 
-      this.btce.trade(pair, 'sell', price, amount, this.errorHandler(this.placeOrder, args, retry, 'placeOrder', handler));
+      this.btce.trade(pair, 'sell', price, amount, this.errorHandler(this.placeOrder, args, retry, 'placeOrder', handler, finished));
 
     } else {
 
@@ -242,11 +236,9 @@ exchange.prototype.orderFilled = function(order, retry, cb) {
 
   var args = arguments;
 
-  var wrapper = function(finish) {
+  var wrapper = function(finished) {
 
     var handler = function(err, response) {
-
-      finish();
 
       if(!err) {
 
@@ -268,7 +260,7 @@ exchange.prototype.orderFilled = function(order, retry, cb) {
 
     };
 
-    this.btce.orderInfo(order, this.errorHandler(this.orderFilled, args, retry, 'orderFilled', handler));
+    this.btce.orderInfo(order, this.errorHandler(this.orderFilled, args, retry, 'orderFilled', handler, finished));
 
   }.bind(this);
 
@@ -284,11 +276,9 @@ exchange.prototype.cancelOrder = function(order, retry, cb) {
 
     if(!filled && !err) {
 
-      var wrapper = function(finish) {
+      var wrapper = function(finished) {
 
         var handler = function(err, response) {
-
-          finish();
 
           if(!err) {
 
@@ -306,7 +296,7 @@ exchange.prototype.cancelOrder = function(order, retry, cb) {
 
         };
 
-        this.btce.cancelOrder(order, this.errorHandler(this.cancelOrder, args, retry, 'cancelOrder', handler));
+        this.btce.cancelOrder(order, this.errorHandler(this.cancelOrder, args, retry, 'cancelOrder', handler, finished));
 
       }.bind(this);
 

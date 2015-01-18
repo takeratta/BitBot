@@ -1,4 +1,5 @@
 var _ = require('underscore');
+var tools = require('../util/tools.js');
 
 var loggingservice = require('../services/loggingservice.js');
 var storageservice = require('../services/storage.js');
@@ -16,19 +17,19 @@ var profitreporter = require('../services/profitreporter.js');
 var config = require('../config.js');
 //------------------------------Config
 
-//------------------------------IntializeModules
-var logger = new loggingservice('app', config.debug);
+//------------------------------InitializeModules
+var logger = new loggingservice('trader', config.debug);
 var storage = new storageservice(config.exchangeSettings, config.mongoConnectionString, logger);
 var exchangeapi = new exchangeapiservice(config.exchangeSettings, config.apiSettings, logger);
 var retriever = new dataretriever(config.downloaderRefreshSeconds, exchangeapi, logger);
 var processor = new dataprocessor(storage, logger);
 var aggregator = new candleaggregator(config.indicatorSettings.candleStickSizeMinutes, storage, logger);
-var advisor = new tradingadvisor(config.indicatorSettings, false, storage, logger);
+var advisor = new tradingadvisor(config.indicatorSettings, storage, logger);
 var agent = new tradingagent(config.tradingEnabled, config.exchangeSettings, storage, exchangeapi, logger);
 var pusher = new pushservice(config.pushOver, logger);
 var monitor = new ordermonitor(exchangeapi, logger);
 var reporter = new profitreporter(config.exchangeSettings.currencyPair, storage, exchangeapi, logger);
-//------------------------------IntializeModules
+//------------------------------InitializeModules
 
 var trader = function() {
 
@@ -40,7 +41,7 @@ var trader = function() {
 
   processor.on('initialDBWrite', function(){
 
-    reporter.start(config.resetInitialBalances);
+    reporter.start();
 
     advisor.start();
 
@@ -63,6 +64,22 @@ var trader = function() {
     } else if(advice === 'sell') {
 
       agent.order(advice);
+
+    }
+
+  });
+
+  advisor.on('advice', function(result) {
+
+    this.logger.log('Advice: ' + result.advice + ' (' + result.indicatorValue + ')');
+
+    if(result.advice === 'buy') {
+
+      agent.order(result.advice);
+
+    } else if(result.advice === 'sell') {
+
+      agent.order(result.advice);
 
     }
 
@@ -110,11 +127,7 @@ var trader = function() {
 
     if(retry) {
 
-      cancelledOrderRetryTimeout = setTimeout(function(){
-
-        agent.order(order.orderDetails.orderType);
-
-      }, 1000 * 5);
+      agent.order(order.orderDetails.orderType);
 
     }
 
@@ -130,7 +143,7 @@ var trader = function() {
 
   _.bindAll(this, 'start', 'stop');
 
-}
+};
 
 //---EventEmitter Setup
 var Util = require('util');
@@ -147,8 +160,6 @@ trader.prototype.start = function() {
 trader.prototype.stop = function(cb) {
 
   retriever.stop();
-
-  clearTimeout(cancelledOrderRetryTimeout);
 
   monitor.resolvePreviousOrder(function() {
     logger.log('BitBot stopped succesfully!');

@@ -79,9 +79,7 @@ reporter.prototype.processBalance = function(err, result) {
 
 };
 
-reporter.prototype.start = function(resetInitialBalances) {
-
-  this.resetInitialBalances = resetInitialBalances;
+reporter.prototype.start = function() {
 
   this.storage.getInitialBalance(function(err, result) {
 
@@ -94,7 +92,7 @@ reporter.prototype.start = function(resetInitialBalances) {
 
     } else {
 
-      if(result && !resetInitialBalances) {
+      if(result) {
 
         this.initalTotalCurrencyBalance = result;
 

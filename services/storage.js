@@ -7,20 +7,26 @@ var storage = function(exchangeSettings, mongoConnectionString, logger) {
 
 	this.pair = exchangeSettings.currencyPair.pair;
 	this.exchange = exchangeSettings.exchange;
-	this.dbCollectionName = exchangeSettings.exchange + exchangeSettings.currencyPair.pair;
+	this.exchangePair = exchangeSettings.exchange + exchangeSettings.currencyPair.pair;
 	this.mongoConnectionString = mongoConnectionString;
 	this.logger = logger;
 
-	_.bindAll(this, 'push', 'getLastNCandles', 'getAllCandles', 'getAllCandlesSince', 'getLastClose', 'getLastNonEmptyPeriod', 'getLastNonEmptyClose', 'getLastNCompleteAggregatedCandleSticks', 'getLastCompleteAggregatedCandleStick', 'getCompleteAggregatedCandleSticks', 'getLastNAggregatedCandleSticks', 'getAggregatedCandleSticks', 'calculateAggregatedCandleStick', 'aggregateCandleSticks', 'removeOldDBCandles', 'getInitialBalance', 'setInitialBalance');
+	_.bindAll(this, 'push', 'getLastNCandles', 'getAllCandles', 'getAllCandlesSince', 'getLastClose', 'getLastNonEmptyPeriod', 'getLastNonEmptyClose', 'getLastNCompleteAggregatedCandleSticks', 'getLastCompleteAggregatedCandleStick', 'getCompleteAggregatedCandleSticks', 'getLastNAggregatedCandleSticks', 'getAggregatedCandleSticks', 'getAggregatedCandleSticksSince', 'calculateAggregatedCandleStick', 'aggregateCandleSticks', 'removeOldDBCandles', 'dropCollection', 'getInitialBalance', 'setInitialBalance');
 
 };
 
-storage.prototype.push = function(cs, callback) {
+storage.prototype.push = function(csArray, callback) {
 
 	var csDatastore = mongo(this.mongoConnectionString);
-	var csCollection = csDatastore.collection(this.dbCollectionName);
+	var csCollection = csDatastore.collection(this.exchangePair);
 
-	csCollection.update({period: cs.period}, cs, { upsert: true }, function(err, result) {
+	var bulk = csCollection.initializeOrderedBulkOp();
+
+	_.forEach(csArray, function(cs) {
+		bulk.find({period: cs.period}).upsert().updateOne(cs);
+	});
+
+	bulk.execute(function(err, res) {
 
 		csDatastore.close();
 
@@ -41,7 +47,7 @@ storage.prototype.push = function(cs, callback) {
 storage.prototype.getLastNCandles = function(N, callback) {
 
 	var csDatastore = mongo(this.mongoConnectionString);
-	var csCollection = csDatastore.collection(this.dbCollectionName);
+	var csCollection = csDatastore.collection(this.exchangePair);
 
 	csCollection.find({}).sort({period:-1}).limit(N, function(err, candlesSticks) {
 
@@ -65,7 +71,7 @@ storage.prototype.getLastNCandles = function(N, callback) {
 storage.prototype.getAllCandles = function(callback) {
 
 	var csDatastore = mongo(this.mongoConnectionString);
-	var csCollection = csDatastore.collection(this.dbCollectionName);
+	var csCollection = csDatastore.collection(this.exchangePair);
 
 	csCollection.find({}).sort({period:1}, function(err, candlesSticks) {
 
@@ -89,7 +95,7 @@ storage.prototype.getAllCandles = function(callback) {
 storage.prototype.getAllCandlesSince = function(period, callback) {
 
 	var csDatastore = mongo(this.mongoConnectionString);
-	var csCollection = csDatastore.collection(this.dbCollectionName);
+	var csCollection = csDatastore.collection(this.exchangePair);
 
 	csCollection.find({period: { $gte: period }}).sort({period:1}, function(err, candlesSticks) {
 
@@ -113,7 +119,7 @@ storage.prototype.getAllCandlesSince = function(period, callback) {
 storage.prototype.getLastClose = function(callback) {
 
 	var csDatastore = mongo(this.mongoConnectionString);
-	var csCollection = csDatastore.collection(this.dbCollectionName);
+	var csCollection = csDatastore.collection(this.exchangePair);
 
 	csCollection.find({}).sort({period:-1}).limit(1, function(err, candleSticks) {
 
@@ -140,7 +146,7 @@ storage.prototype.getLastClose = function(callback) {
 storage.prototype.getLastNonEmptyPeriod = function(callback) {
 
 	var csDatastore = mongo(this.mongoConnectionString);
-	var csCollection = csDatastore.collection(this.dbCollectionName);
+	var csCollection = csDatastore.collection(this.exchangePair);
 
 	csCollection.find({volume: { $gt: 0 }}).sort({period:-1}).limit(1, function(err, candleSticks) {
 
@@ -167,7 +173,7 @@ storage.prototype.getLastNonEmptyPeriod = function(callback) {
 storage.prototype.getLastNonEmptyClose = function(callback) {
 
 	var csDatastore = mongo(this.mongoConnectionString);
-	var csCollection = csDatastore.collection(this.dbCollectionName);
+	var csCollection = csDatastore.collection(this.exchangePair);
 
 	csCollection.find({volume: { $gt: 0 }}).sort({period:-1}).limit(1, function(err, candleSticks) {
 
@@ -265,6 +271,26 @@ storage.prototype.getAggregatedCandleSticks = function(candleStickSize, callback
 
 };
 
+storage.prototype.getAggregatedCandleSticksSince = function(candleStickSize, period, callback) {
+
+	this.getAllCandlesSince(period, function(err, candleSticks) {
+
+		if(candleSticks.length > 0) {
+
+			var aggregatedCandleSticks = this.aggregateCandleSticks(candleStickSize, candleSticks);
+
+			callback(null, aggregatedCandleSticks);
+
+		} else {
+
+			callback(null, []);
+
+		}
+
+	}.bind(this));
+
+};
+
 storage.prototype.calculateAggregatedCandleStick = function(period, relevantSticks) {
 
 	var currentCandleStick = {'period':period,'open':undefined,'high':undefined,'low':undefined,'close':undefined,'volume':0, 'vwap':undefined};
@@ -337,7 +363,7 @@ storage.prototype.aggregateCandleSticks = function(candleStickSize, candleSticks
 storage.prototype.removeOldDBCandles = function(candleStickSize, callback) {
 
 	var csDatastore = mongo(this.mongoConnectionString);
-	var csCollection = csDatastore.collection(this.dbCollectionName);
+	var csCollection = csDatastore.collection(this.exchangePair);
 
 	var candleStickSizeSeconds = candleStickSize * 60;
 
@@ -354,32 +380,18 @@ storage.prototype.removeOldDBCandles = function(candleStickSize, callback) {
 
 };
 
-storage.prototype.getInitialBalance = function(callback) {
+storage.prototype.dropCollection = function(collection, callback) {
 
 	var csDatastore = mongo(this.mongoConnectionString);
-	var csCollection = csDatastore.collection('balance');
+	var csCollection = csDatastore.collection(collection);
 
-	csCollection.find({exchangePair: this.dbCollectionName}).limit(1, function(err, balance) {
+	csCollection.drop(function(err) {
 
 		csDatastore.close();
 
-		if(err) {
+		callback(err);
 
-			callback(err);
-
-		} else if(balance.length > 0 ){
-
-			var initialBalance = balance[0].initialBalance;
-
-			callback(null, initialBalance);
-
-		} else {
-
-			callback(null, null);
-
-		}
-
-	}.bind(this));
+	});
 
 };
 
@@ -388,7 +400,7 @@ storage.prototype.setInitialBalance = function(initialBalance, callback) {
 	var csDatastore = mongo(this.mongoConnectionString);
 	var csCollection = csDatastore.collection('balance');
 
-	csCollection.update({exchangePair: this.dbCollectionName}, {exchangePair: this.dbCollectionName, initialBalance: initialBalance}, { upsert: true }, function(err, doc) {
+	csCollection.update({exchangePair: this.exchangePair}, {exchangePair: this.exchangePair, initialBalance: initialBalance}, { upsert: true }, function(err, doc) {
 
 		csDatastore.close();
 
@@ -399,6 +411,35 @@ storage.prototype.setInitialBalance = function(initialBalance, callback) {
 		} else {
 
 			callback(null);
+
+		}
+
+	}.bind(this));
+
+};
+
+storage.prototype.getInitialBalance = function(callback) {
+
+	var csDatastore = mongo(this.mongoConnectionString);
+	var csCollection = csDatastore.collection('balance');
+
+	csCollection.find({exchangePair: this.exchangePair}).limit(1, function(err, doc) {
+
+		csDatastore.close();
+
+		if(err) {
+
+			callback(err);
+
+		} else if(doc.length > 0 ){
+
+			var initialBalance = doc[0].initialBalance;
+
+			callback(null, initialBalance);
+
+		} else {
+
+			callback(null, null);
 
 		}
 

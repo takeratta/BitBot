@@ -34,17 +34,21 @@ exchange.prototype.retry = function(method, args) {
   // run the failed method again with the same
   // arguments after wait
 
-  setTimeout(function() { method.apply(self, args); }, 1000*15);
+  setTimeout(function() {
+    method.apply(self, args);
+  }, 1000*15);
 
 };
 
-exchange.prototype.errorHandler = function(caller, receivedArgs, retryAllowed, callerName, handler) {
+exchange.prototype.errorHandler = function(caller, receivedArgs, retryAllowed, callerName, handler, finished) {
 
   return function(err, result) {
 
     var args = _.toArray(receivedArgs);
 
     var parsedError = null;
+
+    finished();
 
     if(err) {
 
@@ -94,8 +98,6 @@ exchange.prototype.getTrades = function(retry, cb) {
 
     var handler = function(err, data) {
 
-      finished();
-
       if(!err) {
 
         var values = _.find(data.result, function(value, key) {
@@ -120,7 +122,7 @@ exchange.prototype.getTrades = function(retry, cb) {
 
     };
 
-    this.kraken.api('Trades', {"pair": pair}, this.errorHandler(this.getTrades, args, retry, 'getTrades', handler));
+    this.kraken.api('Trades', {"pair": pair}, this.errorHandler(this.getTrades, args, retry, 'getTrades', handler, finished));
 
   }.bind(this);
 
@@ -136,8 +138,6 @@ exchange.prototype.getBalance = function(retry, cb) {
 
     var asset = this.currencyPair.asset;
     var currency = this.currencyPair.currency;
-
-    var pair = this.currencyPair.pair;
 
     var handler = function(err, data) {
 
@@ -159,31 +159,13 @@ exchange.prototype.getBalance = function(retry, cb) {
           currencyValue = 0;
         }
 
-        var secondHandler = function(err, data) {
+        this.getTransactionFee(retry, function(err, result) {
 
-          finished();
+          cb(null, {currencyAvailable: currencyValue, assetAvailable: assetValue, fee: result.fee});
 
-          if(!err) {
-
-            var fee = parseFloat(_.find(data.result.fees, function(value, key) {
-              return key === pair;
-            }).fee);
-
-            cb(null, {currencyAvailable:currencyValue, assetAvailable:assetValue, fee:fee});
-
-          } else {
-
-            cb(err, null);
-
-          }
-
-        }.bind(this);
-
-        this.kraken.api('TradeVolume', {"pair": pair}, this.errorHandler(this.getBalance, args, retry, 'getBalance', secondHandler));
+        });
 
       } else {
-
-        finished();
 
         cb(err, null);
 
@@ -191,11 +173,45 @@ exchange.prototype.getBalance = function(retry, cb) {
 
     }.bind(this);
 
-    this.kraken.api('Balance', {}, this.errorHandler(this.getBalance, args, retry, 'getBalance', handler));
+    this.kraken.api('Balance', {}, this.errorHandler(this.getBalance, args, retry, 'getBalance', handler, finished));
 
   }.bind(this);
 
   this.q.push({name: 'getBalance', func: wrapper});
+
+};
+
+exchange.prototype.getTransactionFee = function(retry, cb) {
+
+  var args = arguments;
+
+  var wrapper = function(finished) {
+
+    var pair = this.currencyPair.pair;
+
+    var handler = function(err, data) {
+
+      if (!err) {
+
+        var fee = parseFloat(_.find(data.result.fees, function (value, key) {
+          return key === pair;
+        }).fee);
+
+        cb(null, {fee: fee});
+
+      } else {
+
+        cb(err, null);
+
+      }
+
+    };
+
+    this.kraken.api('TradeVolume', {"pair": pair}, this.errorHandler(this.getTransactionFee, args, retry, 'getTransactionFee', handler, finished));
+
+  }.bind(this);
+
+  this.q.push({name: 'getTransactionFee', func: wrapper});
 
 };
 
@@ -208,8 +224,6 @@ exchange.prototype.getOrderBook = function(retry, cb) {
     var pair = this.currencyPair.pair;
 
     var handler = function(err, data) {
-
-      finished();
 
       if(!err) {
 
@@ -237,7 +251,7 @@ exchange.prototype.getOrderBook = function(retry, cb) {
 
     };
 
-    this.kraken.api('Depth', {"pair": pair}, this.errorHandler(this.getOrderBook, args, retry, 'getOrderBook', handler));
+    this.kraken.api('Depth', {"pair": pair}, this.errorHandler(this.getOrderBook, args, retry, 'getOrderBook', handler, finished));
 
   }.bind(this);
 
@@ -255,8 +269,6 @@ exchange.prototype.placeOrder = function(type, amount, price, retry, cb) {
 
     var handler = function(err, data) {
 
-      finished();
-
       if(!err) {
 
         cb(null, {txid: data.result.txid[0], status: 'open'});
@@ -271,11 +283,11 @@ exchange.prototype.placeOrder = function(type, amount, price, retry, cb) {
 
     if(type === 'buy') {
 
-      this.kraken.api('AddOrder', {"pair": pair, "type": 'buy', "ordertype": 'limit', "price": price, "volume": amount}, this.errorHandler(this.placeOrder, args, retry, 'placeOrder', handler));
+      this.kraken.api('AddOrder', {"pair": pair, "type": 'buy', "ordertype": 'limit', "price": price, "volume": amount}, this.errorHandler(this.placeOrder, args, retry, 'placeOrder', handler, finished));
 
     } else if (type === 'sell') {
 
-      this.kraken.api('AddOrder', {"pair": pair, "type": 'sell', "ordertype": 'limit', "price": price, "volume": amount}, this.errorHandler(this.placeOrder, args, retry, 'placeOrder', handler));
+      this.kraken.api('AddOrder', {"pair": pair, "type": 'sell', "ordertype": 'limit', "price": price, "volume": amount}, this.errorHandler(this.placeOrder, args, retry, 'placeOrder', handler, finished));
 
     } else {
 
@@ -296,8 +308,6 @@ exchange.prototype.orderFilled = function(order, retry, cb) {
   var wrapper = function(finished) {
 
     var handler = function(err, data) {
-
-      finished();
 
       if(!err) {
 
@@ -325,7 +335,7 @@ exchange.prototype.orderFilled = function(order, retry, cb) {
 
     };
 
-    this.kraken.api('OpenOrders', {}, this.errorHandler(this.orderFilled, args, retry, 'orderFilled', handler));
+    this.kraken.api('OpenOrders', {}, this.errorHandler(this.orderFilled, args, retry, 'orderFilled', handler, finished));
 
   }.bind(this);
 
@@ -345,8 +355,6 @@ exchange.prototype.cancelOrder = function(order, retry, cb) {
 
         var handler = function(err, data) {
 
-          finished();
-
           if(!err) {
 
             if(data.result.count > 0) {
@@ -363,7 +371,7 @@ exchange.prototype.cancelOrder = function(order, retry, cb) {
 
         };
 
-        this.kraken.api('CancelOrder', {"txid": order}, this.errorHandler(this.cancelOrder, args, retry, 'cancelOrder', handler));
+        this.kraken.api('CancelOrder', {"txid": order}, this.errorHandler(this.cancelOrder, args, retry, 'cancelOrder', handler, finished));
 
       }.bind(this);
 

@@ -22,7 +22,7 @@ var api = function(exchangeSettings, apiSettings, logger) {
 
   } catch(err) {
 
-    var err = new Error('Wrong exchange chosen. This exchange doesn\'t exist.');
+    this.logger.error('Wrong exchange chosen. This exchange doesn\'t exist.');
     this.logger.error(err.stack);
     process.exit();
 

@@ -38,13 +38,15 @@ exchange.prototype.retry = function(method, args) {
 
 };
 
-exchange.prototype.errorHandler = function(caller, receivedArgs, retryAllowed, callerName, handler) {
+exchange.prototype.errorHandler = function(caller, receivedArgs, retryAllowed, callerName, handler, finished) {
 
   return function(err, result) {
 
     var args = _.toArray(receivedArgs);
 
     var parsedError = null;
+
+    finished();
 
     if(err) {
 
@@ -79,13 +81,11 @@ exchange.prototype.getTrades = function(retry, cb) {
 
   var args = arguments;
 
-  var wrapper = function(finish) {
+  var wrapper = function(finished) {
 
     var pair = this.currencyPair.pair;
 
     var handler = function(err, response) {
-
-      finish();
 
       if(!err) {
 
@@ -107,7 +107,7 @@ exchange.prototype.getTrades = function(retry, cb) {
 
     };
 
-    this.bitstamp.transactions({time: 'hour'}, this.errorHandler(this.getTrades, args, retry, 'getTrades', handler));
+    this.bitstamp.transactions({time: 'hour'}, this.errorHandler(this.getTrades, args, retry, 'getTrades', handler, finished));
 
   }.bind(this);
 
@@ -119,7 +119,7 @@ exchange.prototype.getBalance = function(retry, cb) {
 
   var args = arguments;
 
-  var wrapper = function(finish) {
+  var wrapper = function(finished) {
 
     var asset = this.currencyPair.asset;
     var currency = this.currencyPair.currency;
@@ -127,8 +127,6 @@ exchange.prototype.getBalance = function(retry, cb) {
     var pair = this.currencyPair.pair;
 
     var handler = function(err, result) {
-
-      finish();
 
       if(!err) {
 
@@ -142,7 +140,7 @@ exchange.prototype.getBalance = function(retry, cb) {
 
     };
 
-    this.bitstamp.balance(this.errorHandler(this.getBalance, args, retry, 'getBalance', handler));
+    this.bitstamp.balance(this.errorHandler(this.getBalance, args, retry, 'getBalance', handler, finished));
 
   }.bind(this);
 
@@ -154,13 +152,11 @@ exchange.prototype.getOrderBook = function(retry, cb) {
 
   var args = arguments;
 
-  var wrapper = function (finish) {
+  var wrapper = function (finished) {
 
     var pair = this.currencyPair.pair;
 
     var handler = function(err, result) {
-
-      finish();
 
       if(!err) {
 
@@ -182,7 +178,7 @@ exchange.prototype.getOrderBook = function(retry, cb) {
 
     };
 
-    this.bitstamp.order_book(1, this.errorHandler(this.getOrderBook, args, retry, 'getOrderBook', handler));
+    this.bitstamp.order_book(1, this.errorHandler(this.getOrderBook, args, retry, 'getOrderBook', handler, finished));
 
   }.bind(this);
 
@@ -194,13 +190,11 @@ exchange.prototype.placeOrder = function(type, amount, price, retry, cb) {
 
   var args = arguments;
 
-  var wrapper = function(finish) {
+  var wrapper = function(finished) {
 
     var pair = this.currencyPair.pair;
 
     var handler = function(err, result) {
-
-      finish();
 
       if(!err) {
 
@@ -224,11 +218,11 @@ exchange.prototype.placeOrder = function(type, amount, price, retry, cb) {
 
     if(type === 'buy') {
 
-      this.bitstamp.buy(amount, price, this.errorHandler(this.placeOrder, args, retry, 'placeOrder', handler));
+      this.bitstamp.buy(amount, price, this.errorHandler(this.placeOrder, args, retry, 'placeOrder', handler, finished));
 
     } else if (type === 'sell') {
 
-      this.bitstamp.sell(amount, price, this.errorHandler(this.placeOrder, args, retry, 'placeOrder', handler));
+      this.bitstamp.sell(amount, price, this.errorHandler(this.placeOrder, args, retry, 'placeOrder', handler, finished));
 
     } else {
 
@@ -246,11 +240,9 @@ exchange.prototype.orderFilled = function(order, retry, cb) {
 
   var args = arguments;
 
-  var wrapper = function(finish) {
+  var wrapper = function(finished) {
 
     var handler = function(err, result) {
-
-      finish();
 
       if(!err) {
 
@@ -278,7 +270,7 @@ exchange.prototype.orderFilled = function(order, retry, cb) {
 
     };
 
-    this.bitstamp.open_orders(this.errorHandler(this.orderFilled, args, retry, 'orderFilled', handler));
+    this.bitstamp.open_orders(this.errorHandler(this.orderFilled, args, retry, 'orderFilled', handler, finished));
 
   }.bind(this);
 
@@ -294,11 +286,9 @@ exchange.prototype.cancelOrder = function(order, retry, cb) {
 
     if(!filled && !err) {
 
-      var wrapper = function(finish) {
+      var wrapper = function(finished) {
 
         var handler = function(err, result) {
-
-          finish();
 
           if(!err) {
 
@@ -316,7 +306,7 @@ exchange.prototype.cancelOrder = function(order, retry, cb) {
 
         };
 
-        this.bitstamp.cancel_order(order,this.errorHandler(this.cancelOrder, args, retry, 'cancelOrder', handler));
+        this.bitstamp.cancel_order(order,this.errorHandler(this.cancelOrder, args, retry, 'cancelOrder', handler, finished));
 
       }.bind(this);
 

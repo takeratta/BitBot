@@ -1,4 +1,5 @@
 var _ = require('underscore');
+var cluster = require('cluster');
 
 var loggingservice = require('./services/loggingservice.js');
 
@@ -6,67 +7,116 @@ var loggingservice = require('./services/loggingservice.js');
 var config = require('./config.js');
 //------------------------------Config
 
-//------------------------------IntializeModules
-var logger = new loggingservice('app', config.debug);
-//------------------------------IntializeModules
-
-//------------------------------AnnounceStart
-logger.log('----------------------------------------------------');
-logger.log('Starting BitBot v0.9.5');
-logger.log('Real Trading Enabled = ' + config.tradingEnabled);
-logger.log('Working Dir = ' + process.cwd());
-logger.log('----------------------------------------------------');
-//------------------------------AnnounceStart
-
 var app = function() {
 
-  _.bindAll(this, 'appListener', 'launchTrader', 'launchBacktester', 'start');
+  _.bindAll(this, 'appListener', 'launchTrader', 'launchBacktester', 'launchGa', 'initializeModules', 'start');
 
 };
 
 app.prototype.appListener = function() {
 
   this.app.on('done', function() {
-    logger.log('App closed.');
+    this.logger.log('App closed.');
   }.bind(this));
 
 };
 
 app.prototype.launchTrader = function() {
 
-  logger.log('----------------------------------------------------');
-  logger.log('Launching trader module.');
-  logger.log('----------------------------------------------------');
+  this.logger.log('----------------------------------------------------');
+  this.logger.log('Launching trader module.');
+  this.logger.log('----------------------------------------------------');
   this.app = require('./apps/trader.js');
   this.appListener();
   this.app.start();
 
-}
+};
 
 app.prototype.launchBacktester = function() {
 
-  logger.log('----------------------------------------------------');
-  logger.log('Launching backtester module.');
-  logger.log('----------------------------------------------------');
+  this.logger.log('----------------------------------------------------');
+  this.logger.log('Launching backtester module.');
+  this.logger.log('----------------------------------------------------');
   this.app = require('./apps/backtester.js');
   this.appListener();
   this.app.start();
 
-}
+};
+
+app.prototype.launchGa = function() {
+
+  this.logger.log('----------------------------------------------------');
+  this.logger.log('Launching ga module.');
+  this.logger.log('----------------------------------------------------');
+  this.app = require('./apps/ga.js');
+  this.appListener();
+  this.app.start();
+
+};
+
+app.prototype.launchReset = function(collection) {
+
+  this.logger.log('----------------------------------------------------');
+  this.logger.log('Launching ga module.');
+  this.logger.log('----------------------------------------------------');
+  this.app = require('./apps/reset.js');
+  this.appListener();
+  this.app.start(collection);
+
+};
+
+app.prototype.initializeModules = function(appName) {
+
+  this.logger = new loggingservice(appName, config.debug);
+
+};
 
 app.prototype.start = function() {
 
   var argument = process.argv[2];
 
   if(!argument) {
-    this.launchTrader();
+    this.appName = 'trader';
+    this.run = this.launchTrader;
   } else {
     if(argument === '-b') {
-      this.launchBacktester();
+      this.appName = 'backtester';
+      this.run = this.launchBacktester;
+    } else if(argument === '-g') {
+      this.appName = 'ga';
+      this.run = this.launchGa;
+    } else if(argument === '-rb') {
+      this.appName = 'reset';
+      this.run = function() {
+        this.launchReset('balance');
+      }.bind(this);
+    } else if(argument === '-ro') {
+      this.appName = 'reset';
+      this.run = function() {
+        this.launchReset('bestOrganism');
+      }.bind(this);
     } else {
-      logger.log('Invalid argument, supported options:');
-      logger.log('-b: Launch Backtester');
+      this.appName = 'app';
+      run = null;
     }
+  }
+
+  this.initializeModules(this.appName);
+
+  //------------------------------AnnounceStart
+  this.logger.log('----------------------------------------------------');
+  this.logger.log('Starting BitBot v0.9.6');
+  this.logger.log('Real Trading Enabled = ' + config.tradingEnabled);
+  this.logger.log('Working Dir = ' + process.cwd());
+  this.logger.log('----------------------------------------------------');
+  //------------------------------AnnounceStart
+
+  if(this.run) {
+    this.run();
+  } else {
+    this.logger.log('Invalid argument, supported options:');
+    this.logger.log('-b: Launch Backtester');
+    this.logger.log('-rb: Reset balance');
   }
 
 };

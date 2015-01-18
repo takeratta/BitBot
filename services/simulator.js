@@ -58,7 +58,7 @@ var simulator = function(exchangeSettings, backTesterSettings, indicatorSettings
 
 };
 
-simulator.prototype.calculate = function(csArray, transactionFee) {
+simulator.prototype.calculate = function(csArray, transactionFee, indicatorSettings, callback) {
 
   // Set Variables
   this.options.currencyBalance = this.options.initialCurrencyBalance;
@@ -75,6 +75,7 @@ simulator.prototype.calculate = function(csArray, transactionFee) {
   this.options.totalGain = 0;
   this.options.totalLoss = 0;
   this.options.transactions = [];
+  this.indicatorSettings = indicatorSettings;
   // Set Variables
 
   this.options.transactionFee = transactionFee;
@@ -85,26 +86,22 @@ simulator.prototype.calculate = function(csArray, transactionFee) {
   this.options.firstCs = _.first(csArray);
   this.options.lastCs = _.last(csArray);
 
-  _.forEach(csArray, function(cs) {
+  _.each(csArray, function(cs) {
 
     this.options.latestCandlePeriod = cs.period;
 
     this.options.lastClose = cs.close;
 
-    this.logger.debug('Backtest: Created a new ' + this.options.candleStickSizeMinutes + ' minute candlestick!');
-    this.logger.debug(JSON.stringify(cs));
+    var result = this.advisor.update(cs);
 
-    var advice = this.advisor.update(cs);
-
-    if(advice !== 'hold') {
-      this.createOrder(advice);
+    if (result.advice !== 'hold') {
+      this.createOrder(result.advice);
     }
 
   }.bind(this));
 
   this.postProcess();
-
-  return this.options;
+  callback(this.options);
 
 };
 
@@ -131,7 +128,9 @@ simulator.prototype.postProcess = function() {
   this.options.averageGain = tools.round(this.options.totalGain / this.options.winners, 8);
   this.options.averageLoss = tools.round(this.options.totalLoss / this.options.losers, 8);
 
-}
+  return this.options;
+
+};
 
 simulator.prototype.createOrder = function(type) {
 
@@ -158,7 +157,6 @@ simulator.prototype.createOrder = function(type) {
       this.options.lowestCurrencyValue = this.options.newcurrencyBalance;
     }
 
-    this.logger.debug(new Date(this.options.latestCandlePeriod * 1000) + ' Placed buy order ' + this.options.assetBalance + ' @ ' + this.options.lastClosePlusSlippage);
     this.options.transactions.push(new Date(this.options.latestCandlePeriod * 1000) + ' Placed buy order ' + this.options.assetBalance + ' @ ' + this.options.lastClosePlusSlippage);
 
     this.advisor.setPosition({pos: 'bought', price: this.options.lastClosePlusSlippage});
@@ -200,14 +198,9 @@ simulator.prototype.createOrder = function(type) {
 
     }
 
-    this.logger.debug(new Date(this.options.latestCandlePeriod * 1000) + ' Placed sell order ' + this.options.usableBalance + ' @ ' + this.options.lastCloseMinusSlippage);
     this.options.transactions.push(new Date(this.options.latestCandlePeriod * 1000) + ' Placed sell order ' + this.options.usableBalance + ' @ ' + this.options.lastCloseMinusSlippage);
 
     this.advisor.setPosition({pos: 'sold', price: this.options.lastCloseMinusSlippage});
-
-  } else {
-
-    this.logger.debug('Wanted to place a ' + type + ' order @ ' + this.options.lastClose + ', but there are no more funds available to ' + type);
 
   }
 
@@ -217,9 +210,12 @@ simulator.prototype.report = function() {
 
   this.options.transactions.forEach(function(transaction) {
     this.logger.log(transaction);
-  }.bind(this))
+  }.bind(this));
 
-  this.logger.log('----------Report----------');
+  this.logger.log('--------------Settings--------------');
+  JSON.stringify(this.indicatorSettings, undefined, 2).split(/\n/).forEach(function(line){this.logger.log(line)}.bind(this));
+
+  this.logger.log('---------------Report---------------');
   this.logger.log('Exchange: ' + this.options.exchange);
   this.logger.log('Transaction Fee: ' + this.options.transactionFee + '%');
   this.logger.log('Initial ' + this.options.asset + ' Balance: ' + this.options.initialAssetBalance);
@@ -242,7 +238,7 @@ simulator.prototype.report = function() {
   this.logger.log('Close Price: ' + this.options.closePrice);
   this.logger.log('Start - End Date: ' + this.options.startDate + ' - ' + this.options.endDate);
   this.logger.log('Transactions: ' + this.options.transactions.length);
-  this.logger.log('--------------------------');
+  this.logger.log('------------------------------------');
 
 };
 

@@ -43,11 +43,9 @@ downloader.prototype.start = function() {
 
   this.logger.log('Downloader started!');
 
-  this.logger.debug('Retrieving new trades from exchange API.');
   this.exchangeapi.getTrades(false, this.processTrades);
 
   this.downloadInterval = setInterval(function(){
-    this.logger.debug('Retrieving new trades from exchange API.');
     this.exchangeapi.getTrades(false, this.processTrades);
   }.bind(this),1000 * this.refreshInterval);
 

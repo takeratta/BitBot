@@ -10,16 +10,16 @@ var indicator = function(options) {
   this.advice = 'hold';
   this.length = 0;
 
-  _.bindAll(this, 'calculate', 'setPosition');
+  _.bindAll(this, 'calculate', 'setPosition', 'getPosition');
 
-  if(!'neededPeriods' in options || !'longPeriods' in options || !'shortPeriods' in options || !'emaPeriods' in options || !'buyTreshold' in options || !'sellTreshold' in options) {
+  if(!'neededPeriods' in options || !'longPeriods' in options || !'shortPeriods' in options || !'emaPeriods' in options || !'buyThreshold' in options || !'sellThreshold' in options) {
     var err = new Error('Invalid options for PPO indicator, exiting.');
     this.logger.error(err.stack);
     process.exit();
   }
 
   // indicatorOptions
-  // options: {neededPeriods: number, longPeriods: number, shortPeriods: number, emaPeriods: number, buyTreshold: number, sellTreshold: number}
+  // options: {neededPeriods: number, longPeriods: number, shortPeriods: number, emaPeriods: number, buyThreshold: number, sellThreshold: number}
 
 };
 
@@ -54,11 +54,11 @@ indicator.prototype.calculate = function(cs) {
 
   this.indicator = {'emaLong': emaLong, 'emaShort': emaShort, 'PPO': PPO, 'PPOSignal': PPOSignal, 'result': PPOHistogram};
 
-  if(this.previousIndicator.result <= this.options.buyTreshold && this.indicator.result > this.options.buyTreshold) {
+  if(this.previousIndicator.result <= this.options.buyThreshold && this.indicator.result > this.options.buyThreshold) {
 
     this.advice = 'buy';
 
-  } else if(this.previousIndicator.result >= this.options.sellTreshold && this.indicator.result < this.options.sellTreshold) {
+  } else if(this.previousIndicator.result >= this.options.sellThreshold && this.indicator.result < this.options.sellThreshold) {
 
     this.advice = 'sell';
 
@@ -83,6 +83,12 @@ indicator.prototype.calculate = function(cs) {
 indicator.prototype.setPosition = function(pos) {
 
   this.position = pos;
+
+};
+
+indicator.prototype.getPosition = function() {
+
+  return this.position;
 
 };
 

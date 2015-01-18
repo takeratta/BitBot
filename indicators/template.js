@@ -12,7 +12,7 @@ var indicator = function(options) {
   this.options = options;
   this.position = {};
 
-  _.bindAll(this, 'calculate', 'setPosition');
+  _.bindAll(this, 'calculate', 'setPosition', 'getPosition');
 
   if(!'option' in options) {
     var err = new Error('Invalid options for indicator, exiting.');
@@ -50,6 +50,12 @@ indicator.prototype.setPosition = function(pos) {
   // {pos: position, price: price}
 
   this.position = pos;
+
+};
+
+indicator.prototype.getPosition = function() {
+
+  return this.position;
 
 };
 
