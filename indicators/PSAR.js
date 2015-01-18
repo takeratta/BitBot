@@ -8,7 +8,7 @@ var indicator = function(options) {
   this.csArray = [];
   this.firstCandleDone = false;
 
-  _.bindAll(this, 'calculate', 'setPosition', 'getPosition');
+  _.bindAll(this, 'calculate', 'setPosition');
 
   if(!'AFIncrement' in options || !'maximumAF' in options) {
     var err = new Error('Invalid options for PSAR indicator, exiting.');
@@ -175,12 +175,6 @@ indicator.prototype.calculate = function(cs) {
 indicator.prototype.setPosition = function(pos) {
 
   this.position = pos;
-
-};
-
-indicator.prototype.getPosition = function() {
-
-  return this.position;
 
 };
 

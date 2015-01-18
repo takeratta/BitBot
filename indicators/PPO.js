@@ -10,7 +10,7 @@ var indicator = function(options) {
   this.advice = 'hold';
   this.length = 0;
 
-  _.bindAll(this, 'calculate', 'setPosition', 'getPosition');
+  _.bindAll(this, 'calculate', 'setPosition');
 
   if(!'neededPeriods' in options || !'longPeriods' in options || !'shortPeriods' in options || !'emaPeriods' in options || !'buyThreshold' in options || !'sellThreshold' in options) {
     var err = new Error('Invalid options for PPO indicator, exiting.');
@@ -83,12 +83,6 @@ indicator.prototype.calculate = function(cs) {
 indicator.prototype.setPosition = function(pos) {
 
   this.position = pos;
-
-};
-
-indicator.prototype.getPosition = function() {
-
-  return this.position;
 
 };
 
