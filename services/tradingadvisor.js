@@ -59,7 +59,9 @@ advisor.prototype.start = function() {
 
 		}
 
-		this.emit('advice', this.latestTradeAdvice );
+		if(['buy', 'sell'].indexOf(this.latestTradeAdvice) >= 0) {
+			this.emit('advice', this.latestTradeAdvice);
+		}
 
 	}.bind(this));
 
@@ -86,15 +88,9 @@ advisor.prototype.setPosition = function(pos) {
 
 };
 
-advisor.prototype.setIndicator = function(indicatorSettings, updateIndicator) {
+advisor.prototype.setIndicator = function(indicatorSettings) {
 
 	this.selectedIndicator = new this.indicators[indicatorSettings.indicator](indicatorSettings.options);
-
-	if(updateIndicator) {
-
-		this.start();
-
-	}
 
 };
 

@@ -36,7 +36,7 @@ Util.inherits(backtester, EventEmitter);
 
 backtester.prototype.run = function() {
 
-  advisor.setIndicator(this.indicatorSettings, false);
+  advisor.setIndicator(this.indicatorSettings);
 
   async.series(
       {

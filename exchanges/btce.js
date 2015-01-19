@@ -126,7 +126,7 @@ exchange.prototype.getBalance = function(retry, cb) {
 
       if(!err) {
 
-        cb(null, {assetAvailable: response.funds[asset], currencyAvailable: response.funds[currency], fee: 0.2});
+        cb(null, {assetAvailable: response.return.funds[asset], currencyAvailable: response.return.funds[currency], fee: 0.2});
 
       } else {
 
@@ -196,13 +196,13 @@ exchange.prototype.placeOrder = function(type, amount, price, retry, cb) {
 
         var status = 'open';
 
-        if(response.order_id === 0) {
+        if(response.return.order_id === 0) {
 
           status = 'filled';
 
         }
 
-        cb(null, {txid: response.order_id, status: status});
+        cb(null, {txid: response.return.order_id, status: status});
 
       } else {
 
@@ -242,7 +242,7 @@ exchange.prototype.orderFilled = function(order, retry, cb) {
 
       if(!err) {
 
-        if(response[order]) {
+        if(response.return[order]) {
 
           cb(null, false);
 
@@ -282,7 +282,7 @@ exchange.prototype.cancelOrder = function(order, retry, cb) {
 
           if(!err) {
 
-            if(response.order_id === order) {
+            if(response.return.order_id === order) {
               cb(null, true);
             } else {
               cb(null, false);
