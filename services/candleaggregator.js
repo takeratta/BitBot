@@ -8,7 +8,7 @@ var aggregator = function(candleStickSizeMinutes, storage, logger) {
 	this.logger = logger;
 	this.previousCompleteCandleStickPeriod = 0;
 
-	_.bindAll(this, 'update');
+	_.bindAll(this, 'update', 'setCandleStickSize');
 
 };
 
@@ -63,7 +63,7 @@ aggregator.prototype.setCandleStickSize = function(candleStickSizeMinutes) {
 
 		}
 
-	});
+	}.bind(this));
 
 };
 

@@ -9,7 +9,10 @@ var reporter = function(currencyPair, storage, exchangeapi, logger) {
   this.exchangeapi = exchangeapi;
   this.logger = logger;
 
-  _.bindAll(this, 'intialize', 'createReport', 'processBalance', 'start', 'updateBalance');
+  this.currencyBalance = 0;
+  this.assetBalance = 0;
+
+  _.bindAll(this, 'initialize', 'createReport', 'processBalance', 'start', 'updateBalance');
 
 };
 
@@ -19,15 +22,15 @@ var EventEmitter = require('events').EventEmitter;
 Util.inherits(reporter, EventEmitter);
 //---EventEmitter Setup
 
-reporter.prototype.intialize = function(err, result) {
+reporter.prototype.initialize = function(err, result) {
 
-  this.currencyBalance = parseFloat(result.balance.currencyAvailable);
-  this.assetBalance = tools.round(parseFloat(result.balance.assetAvailable), 8);
+  var currencyBalance = parseFloat(result.balance.currencyAvailable);
+  var assetBalance = tools.round(parseFloat(result.balance.assetAvailable), 8);
 
-  this.highestBid = _.first(result.orderBook.bids).currencyPrice;
-  this.assetBalanceInCurrency = this.assetBalance * this.highestBid;
+  var highestBid = _.first(result.orderBook.bids).currencyPrice;
+  var assetBalanceInCurrency = assetBalance * highestBid;
 
-  this.initalTotalCurrencyBalance = tools.round(this.currencyBalance + this.assetBalanceInCurrency, 8);
+  this.initalTotalCurrencyBalance = tools.round(currencyBalance + assetBalanceInCurrency, 8);
 
   this.storage.setInitialBalance(this.initalTotalCurrencyBalance, function(err) {
 
@@ -37,13 +40,6 @@ reporter.prototype.intialize = function(err, result) {
       this.logger.error(err.stack);
 
       process.exit();
-
-    } else {
-
-      if(this.resetInitialBalances) {
-        this.logger.log(this.currencyPair.pair + ' Balance reset successfully, change the configuration setting back to false and restart the application.');
-        process.exit();
-      }
 
     }
 
@@ -61,19 +57,19 @@ reporter.prototype.createReport = function() {
 
 };
 
-reporter.prototype.processBalance = function(err, result) {
+reporter.prototype.processBalance = function(err, result, includeReport, order) {
 
   this.currencyBalance = parseFloat(result.balance.currencyAvailable);
   this.assetBalance = tools.round(parseFloat(result.balance.assetAvailable), 8);
 
-  this.highestBid = _.first(result.orderBook.bids).currencyPrice;
-  this.assetBalanceInCurrency = this.assetBalance * this.highestBid;
+  var highestBid = _.first(result.orderBook.bids).currencyPrice;
+  var assetBalanceInCurrency = this.assetBalance * highestBid;
 
-  this.totalCurrencyBalance = tools.round(this.currencyBalance + this.assetBalanceInCurrency, 8);
-  this.profitAbsolute = this.totalCurrencyBalance - this.initalTotalCurrencyBalance;
+  this.totalCurrencyBalance = tools.round(this.currencyBalance + assetBalanceInCurrency, 8);
+  this.profitAbsolute = tools.round(this.totalCurrencyBalance - this.initalTotalCurrencyBalance, 8);
   this.profitPercentage = tools.round((this.profitAbsolute / this.initalTotalCurrencyBalance) * 100, 8);
 
-  if(this.includeReport) {
+  if(includeReport) {
     this.createReport();
   }
 
@@ -103,7 +99,7 @@ reporter.prototype.start = function() {
             balance: function(cb) {this.exchangeapi.getBalance(true, cb);}.bind(this),
             orderBook: function(cb) {this.exchangeapi.getOrderBook(true, cb);}.bind(this)
           },
-          this.intialize
+          this.initialize
         );
 
       }
@@ -114,17 +110,33 @@ reporter.prototype.start = function() {
 
 };
 
-reporter.prototype.updateBalance = function(includeReport) {
+reporter.prototype.updateBalance = function(includeReport, order) {
 
-  this.includeReport = includeReport;
+  if(order.orderDetails.order != 'Simulated') {
 
-  async.series(
-    {
-      balance: function(cb) {this.exchangeapi.getBalance(true, cb);}.bind(this),
-      orderBook: function(cb) {this.exchangeapi.getOrderBook(true, cb);}.bind(this)
-    },
-    this.processBalance
-  );
+    async.series(
+        {
+          balance: function (cb) {
+            this.exchangeapi.getBalance(true, cb);
+          }.bind(this),
+          orderBook: function (cb) {
+            this.exchangeapi.getOrderBook(true, cb);
+          }.bind(this)
+        },
+        function (err, result) {
+          this.processBalance(err, result, includeReport, order);
+        }.bind(this)
+    );
+
+  } else {
+
+    this.exchangeapi.getOrderBook(true, function(err, result) {
+
+        this.processBalance(err, {balance: {currencyAvailable: order.orderDetails.simulationBalance.currencyAvailable, assetAvailable: order.orderDetails.simulationBalance.assetAvailable}, orderBook: result}, includeReport, order);
+
+    }.bind(this));
+
+  }
 
 };
 

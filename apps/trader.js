@@ -117,13 +117,13 @@ var trader = function() {
 
     }
 
-    reporter.updateBalance(true);
+    reporter.updateBalance(true, order);
 
   });
 
   monitor.on('cancelled', function(order, retry) {
 
-    reporter.updateBalance(false);
+    reporter.updateBalance(false, order);
 
     if(retry) {
 

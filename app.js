@@ -105,7 +105,7 @@ app.prototype.start = function() {
 
   //------------------------------AnnounceStart
   this.logger.log('----------------------------------------------------');
-  this.logger.log('Starting BitBot v0.9.6');
+  this.logger.log('Starting BitBot v0.9.7');
   this.logger.log('Real Trading Enabled = ' + config.tradingEnabled);
   this.logger.log('Working Dir = ' + process.cwd());
   this.logger.log('----------------------------------------------------');

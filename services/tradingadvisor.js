@@ -39,9 +39,11 @@ var EventEmitter = require('events').EventEmitter;
 Util.inherits(advisor, EventEmitter);
 //---EventEmitter Setup
 
-advisor.prototype.start = function() {
+advisor.prototype.start = function(callback) {
 
 	this.storage.getLastNCompleteAggregatedCandleSticks(1000, this.candleStickSize, function(err, candleSticks) {
+
+		this.latestTradeAdvice = {advice: 'hold'};
 
 		for(var i = 0; i < candleSticks.length; i++) {
 
@@ -59,8 +61,12 @@ advisor.prototype.start = function() {
 
 		}
 
-		if(['buy', 'sell'].indexOf(this.latestTradeAdvice) >= 0) {
+		if(['buy', 'sell'].indexOf(this.latestTradeAdvice.advice) >= 0) {
 			this.emit('advice', this.latestTradeAdvice);
+		}
+
+		if(callback) {
+			callback();
 		}
 
 	}.bind(this));
