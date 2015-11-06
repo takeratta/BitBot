@@ -109,7 +109,7 @@ agent.prototype.calculateOrder = function(result) {
 
 		this.logger.log('Lowest Ask: ' + lowestAsk + ' Lowest Ask With Slippage: ' + lowestAskWithSlippage);
 
-		this.orderDetails.price = lowestAskWithSlippage;
+		this.orderDetails.price = tools.round(lowestAskWithSlippage, this.exchangeapi.orderPriceMaxDecimals);
 		this.orderDetails.amount = tools.floor(balance / this.orderDetails.price, 8);
 
 		this.simulationBalance = {assetAvailable: tools.round(this.orderDetails.assetAvailable +  this.orderDetails.amount,8), currencyAvailable: 0, fee: this.orderDetails.transactionFee};
@@ -122,7 +122,7 @@ agent.prototype.calculateOrder = function(result) {
 
 		this.logger.log('Highest Bid: ' + highestBid + ' Highest Bid With Slippage: ' + highestBidWithSlippage);
 
-		this.orderDetails.price = highestBidWithSlippage;
+		this.orderDetails.price = tools.round(highestBidWithSlippage, this.exchangeapi.orderPriceMaxDecimals);
 		this.orderDetails.amount = tools.round(this.orderDetails.assetAvailable - this.tradingReserveAsset, 8);
 
 		this.simulationBalance = {assetAvailable: 0, currencyAvailable: tools.round(this.orderDetails.currencyAvailable + (this.orderDetails.amount * this.orderDetails.price), 8), fee: this.orderDetails.transactionFee};
@@ -147,7 +147,7 @@ agent.prototype.placeRealOrder = function() {
 
 };
 
-agent.prototype.placeSimulatedOrder = function() {
+agent.prototype.placeSimulatedOrder = function() {console.dir(this.orderDetails)
 
 	if(this.orderDetails.amount <= 0) {
 

@@ -28,6 +28,8 @@ var api = function(exchangeSettings, apiSettings, logger) {
 
   }
 
+  this.orderPriceMaxDecimals = this.selectedExchange.orderPriceMaxDecimals || 8;
+
   _.bindAll(this, 'getTrades', 'getBalance', 'getOrderBook', 'placeOrder', 'orderFilled' ,'cancelOrder');
 
 };
