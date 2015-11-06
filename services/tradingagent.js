@@ -147,7 +147,7 @@ agent.prototype.placeRealOrder = function() {
 
 };
 
-agent.prototype.placeSimulatedOrder = function() {console.dir(this.orderDetails)
+agent.prototype.placeSimulatedOrder = function() {
 
 	if(this.orderDetails.amount <= 0) {
 
