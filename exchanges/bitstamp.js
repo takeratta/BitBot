@@ -9,6 +9,7 @@ var exchange = function(currencyPair, apiSettings, logger) {
   this.bitstamp = new Bitstamp(apiSettings.apiKey, apiSettings.secret, apiSettings.clientId);
 
   this.orderPriceMaxDecimals = this.bitstamp.orderPriceMaxDecimals || 2; // with fallback until module bitstamp api is updated
+  this.minimumOrderSize      = this.bitstamp.minimumOrderSize || 5;           // with fallback until module bitstamp api is updated
 
   this.q = async.queue(function (task, callback) {
     this.logger.debug('Added ' + task.name + ' API call to the queue.');

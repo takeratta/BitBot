@@ -135,7 +135,7 @@ agent.prototype.calculateOrder = function(result) {
 
 agent.prototype.placeRealOrder = function() {
 
-	if(this.orderDetails.amount <= 0) {
+	if(this.orderDetails.amount === 0 || this.orderDetails.amount <= this.exchangeapi.minimumOrderSize) {
 
 		this.logger.log('Insufficient funds to place an order.');
 
@@ -149,7 +149,7 @@ agent.prototype.placeRealOrder = function() {
 
 agent.prototype.placeSimulatedOrder = function() {
 
-	if(this.orderDetails.amount <= 0) {
+	if(this.orderDetails.amount === 0 || this.orderDetails.amount <= this.exchangeapi.minimumOrderSize) {
 
 		this.logger.log('Insufficient funds to place an order.');
 
