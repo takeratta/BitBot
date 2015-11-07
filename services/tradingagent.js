@@ -132,6 +132,7 @@ agent.prototype.calculateOrder = function(result) {
 	}
 
 	if (this.orderDetails.amount * this.orderDetails.price < this.exchangeapi.minimumOrderSize) {
+        // Could use some refactoring so that we don't log the two previous messages if we can't make an order anyway
 		this.logger.log('Tradeable amount is below exchange\'s minimum order size.');
 		return false;
 	}
