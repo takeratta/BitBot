@@ -32,7 +32,9 @@ agent.prototype.order = function(orderType) {
 
 	var process = function (err, result) {
 
-		this.calculateOrder(result);
+		if(!this.calculateOrder(result)) {
+			return false;
+		}
 
 		if(this.tradingEnabled) {
 			this.placeRealOrder();
@@ -129,13 +131,20 @@ agent.prototype.calculateOrder = function(result) {
 
 	}
 
+	if (this.orderDetails.amount * this.orderDetails.price < this.exchangeapi.minimumOrderSize) {
+		this.logger.log('Tradeable amount is below exchange\'s minimum order size.');
+		return false;
+	}
+
 	this.orderDetails.simulationBalance = this.simulationBalance;
+
+	return true;
 
 };
 
 agent.prototype.placeRealOrder = function() {
 
-	if(this.orderDetails.amount === 0 || this.orderDetails.amount <= this.exchangeapi.minimumOrderSize) {
+	if(this.orderDetails.amount <= 0) {
 
 		this.logger.log('Insufficient funds to place an order.');
 
@@ -149,7 +158,7 @@ agent.prototype.placeRealOrder = function() {
 
 agent.prototype.placeSimulatedOrder = function() {
 
-	if(this.orderDetails.amount === 0 || this.orderDetails.amount <= this.exchangeapi.minimumOrderSize) {
+	if(this.orderDetails.amount <= 0) {
 
 		this.logger.log('Insufficient funds to place an order.');
 
