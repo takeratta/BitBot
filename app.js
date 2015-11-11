@@ -25,6 +25,7 @@ app.prototype.launchTrader = function() {
 
   this.logger.log('----------------------------------------------------');
   this.logger.log('Launching trader module.');
+  this.logger.log('Trade at start = ' + config.tradeAtStart);
   this.logger.log('----------------------------------------------------');
   this.app = require('./apps/trader.js');
   this.appListener();

@@ -4,6 +4,9 @@ var config = {};
 
 //------------------------------EnableRealTrading
 config.tradingEnabled = false;
+// If false trading is simulated, candles are still aggregated
+config.tradeAtStart = false;
+// If true a trade is made immediately if the advice is either buy or sell
 //------------------------------EnableRealTrading
 
 //------------------------------exchangeSettings
