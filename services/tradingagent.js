@@ -4,17 +4,17 @@ var async = require('async');
 
 var agent = function(tradingEnabled, exchangeSettings, storage, exchangeapi, logger) {
 
-	_.bindAll(this, 'order', 'calculateOrder', 'placeRealOrder', 'placeSimulatedOrder', 'processOrder');
+  _.bindAll(this, 'order', 'calculateOrder', 'placeRealOrder', 'placeSimulatedOrder', 'processOrder');
 
-	this.tradingEnabled = tradingEnabled;
-	this.currencyPair = exchangeSettings.currencyPair;
-	this.tradingReserveAsset = exchangeSettings.tradingReserveAsset;
-	this.tradingReserveCurrency = exchangeSettings.tradingReserveCurrency;
-	this.slippagePercentage = exchangeSettings.slippagePercentage;
+  this.tradingEnabled = tradingEnabled;
+  this.currencyPair = exchangeSettings.currencyPair;
+  this.tradingReserveAsset = exchangeSettings.tradingReserveAsset;
+  this.tradingReserveCurrency = exchangeSettings.tradingReserveCurrency;
+  this.slippagePercentage = exchangeSettings.slippagePercentage;
 
-	this.storage = storage;
-	this.exchangeapi = exchangeapi;
-	this.logger = logger;
+  this.storage = storage;
+  this.exchangeapi = exchangeapi;
+  this.logger = logger;
 
 };
 
@@ -26,174 +26,174 @@ Util.inherits(agent, EventEmitter);
 
 agent.prototype.order = function(orderType) {
 
-	this.orderDetails = {};
+  this.orderDetails = {};
 
-	this.orderDetails.orderType = orderType;
+  this.orderDetails.orderType = orderType;
 
-	var process = function (err, result) {
+  var process = function (err, result) {
 
-		if(!this.calculateOrder(result)) {
-			return false;
-		}
+    if(!this.calculateOrder(result)) {
+      return false;
+    }
 
-		if(this.tradingEnabled) {
-			this.placeRealOrder();
-		} else {
-			this.placeSimulatedOrder();
-		}
+    if(this.tradingEnabled) {
+      this.placeRealOrder();
+    } else {
+      this.placeSimulatedOrder();
+    }
 
-	}.bind(this);
+  }.bind(this);
 
-	var simulate = function() {
+  var simulate = function() {
 
-		async.series(
-			{
-				balance: function(cb) {cb(null, {assetAvailable: this.simulationBalance.assetAvailable, currencyAvailable: this.simulationBalance.currencyAvailable, fee: this.simulationBalance.fee});}.bind(this),
-				orderBook: function(cb) {this.exchangeapi.getOrderBook(true, cb);}.bind(this),
-				lastClose: function(cb) {this.storage.getLastClose(cb);}.bind(this)
-			},
-			process.bind(this)
-		);
+    async.series(
+      {
+        balance: function(cb) {cb(null, {assetAvailable: this.simulationBalance.assetAvailable, currencyAvailable: this.simulationBalance.currencyAvailable, fee: this.simulationBalance.fee});}.bind(this),
+        orderBook: function(cb) {this.exchangeapi.getOrderBook(true, cb);}.bind(this),
+        lastClose: function(cb) {this.storage.getLastClose(cb);}.bind(this)
+      },
+      process.bind(this)
+    );
 
-	}.bind(this);
+  }.bind(this);
 
-	if(this.tradingEnabled) {
+  if(this.tradingEnabled) {
 
-		async.series(
-			{
-				balance: function(cb) {this.exchangeapi.getBalance(true, cb);}.bind(this),
-				orderBook: function(cb) {this.exchangeapi.getOrderBook(true, cb);}.bind(this),
-				lastClose: function(cb) {this.storage.getLastClose(cb);}.bind(this)
-			},
-			process.bind(this)
-		);
+    async.series(
+      {
+        balance: function(cb) {this.exchangeapi.getBalance(true, cb);}.bind(this),
+        orderBook: function(cb) {this.exchangeapi.getOrderBook(true, cb);}.bind(this),
+        lastClose: function(cb) {this.storage.getLastClose(cb);}.bind(this)
+      },
+      process.bind(this)
+    );
 
-	} else {
+  } else {
 
-		if(!this.simulationBalance) {
+    if(!this.simulationBalance) {
 
-			this.exchangeapi.getBalance(true, function(err, result) {
+      this.exchangeapi.getBalance(true, function(err, result) {
 
-				this.simulationBalance = {assetAvailable: result.assetAvailable, currencyAvailable: result.currencyAvailable, fee: result.fee};
+        this.simulationBalance = {assetAvailable: result.assetAvailable, currencyAvailable: result.currencyAvailable, fee: result.fee};
 
-				simulate();
+        simulate();
 
-			}.bind(this));
+      }.bind(this));
 
-		} else {
+    } else {
 
-			simulate();
+      simulate();
 
-		}
+    }
 
-	}
+  }
 
 };
 
 agent.prototype.calculateOrder = function(result) {
 
-	this.orderDetails.assetAvailable = parseFloat(result.balance.assetAvailable);
-	this.orderDetails.currencyAvailable = parseFloat(result.balance.currencyAvailable);
-	this.orderDetails.transactionFee = parseFloat(result.balance.fee);
+  this.orderDetails.assetAvailable = parseFloat(result.balance.assetAvailable);
+  this.orderDetails.currencyAvailable = parseFloat(result.balance.currencyAvailable);
+  this.orderDetails.transactionFee = parseFloat(result.balance.fee);
 
-	var orderBook = result.orderBook;
+  var orderBook = result.orderBook;
 
-	var lastClose = result.lastClose;
+  var lastClose = result.lastClose;
 
-	this.logger.log('Preparing to place a ' + this.orderDetails.orderType + ' order! (' + this.currencyPair.asset + ' Balance: ' + this.orderDetails.assetAvailable + ' ' + this.currencyPair.currency + ' Balance: ' + this.orderDetails.currencyAvailable + ' Trading Fee: ' + this.orderDetails.transactionFee +')');
+  this.logger.log('Preparing to place a ' + this.orderDetails.orderType + ' order! (' + this.currencyPair.asset + ' Balance: ' + this.orderDetails.assetAvailable + ' ' + this.currencyPair.currency + ' Balance: ' + this.orderDetails.currencyAvailable + ' Trading Fee: ' + this.orderDetails.transactionFee +')');
 
-	if(this.orderDetails.orderType === 'buy') {
+  if(this.orderDetails.orderType === 'buy') {
 
-		var lowestAsk = lastClose;
+    var lowestAsk = lastClose;
 
-		var lowestAskWithSlippage = tools.round(lowestAsk * (1 + (this.slippagePercentage / 100)), 8);
-		var balance = (this.orderDetails.currencyAvailable - this.tradingReserveCurrency) * (1 - (this.orderDetails.transactionFee / 100));
+    var lowestAskWithSlippage = tools.round(lowestAsk * (1 + (this.slippagePercentage / 100)), 8);
+    var balance = (this.orderDetails.currencyAvailable - this.tradingReserveCurrency) * (1 - (this.orderDetails.transactionFee / 100));
 
-		this.logger.log('Lowest Ask: ' + lowestAsk + ' Lowest Ask With Slippage: ' + lowestAskWithSlippage);
+    this.logger.log('Lowest Ask: ' + lowestAsk + ' Lowest Ask With Slippage: ' + lowestAskWithSlippage);
 
-		this.orderDetails.price = tools.round(lowestAskWithSlippage, this.exchangeapi.orderPriceMaxDecimals);
-		this.orderDetails.amount = tools.floor(balance / this.orderDetails.price, 8);
+    this.orderDetails.price = tools.round(lowestAskWithSlippage, this.exchangeapi.orderPriceMaxDecimals);
+    this.orderDetails.amount = tools.floor(balance / this.orderDetails.price, 8);
 
-		this.simulationBalance = {assetAvailable: tools.round(this.orderDetails.assetAvailable +  this.orderDetails.amount,8), currencyAvailable: 0, fee: this.orderDetails.transactionFee};
+    this.simulationBalance = {assetAvailable: tools.round(this.orderDetails.assetAvailable +  this.orderDetails.amount,8), currencyAvailable: 0, fee: this.orderDetails.transactionFee};
 
-	} else if(this.orderDetails.orderType === 'sell') {
+  } else if(this.orderDetails.orderType === 'sell') {
 
-		var highestBid = lastClose;
+    var highestBid = lastClose;
 
-		var highestBidWithSlippage = tools.round(highestBid * (1 - (this.slippagePercentage / 100)), 8);
+    var highestBidWithSlippage = tools.round(highestBid * (1 - (this.slippagePercentage / 100)), 8);
 
-		this.logger.log('Highest Bid: ' + highestBid + ' Highest Bid With Slippage: ' + highestBidWithSlippage);
+    this.logger.log('Highest Bid: ' + highestBid + ' Highest Bid With Slippage: ' + highestBidWithSlippage);
 
-		this.orderDetails.price = tools.round(highestBidWithSlippage, this.exchangeapi.orderPriceMaxDecimals);
-		this.orderDetails.amount = tools.round(this.orderDetails.assetAvailable - this.tradingReserveAsset, 8);
+    this.orderDetails.price = tools.round(highestBidWithSlippage, this.exchangeapi.orderPriceMaxDecimals);
+    this.orderDetails.amount = tools.round(this.orderDetails.assetAvailable - this.tradingReserveAsset, 8);
 
-		this.simulationBalance = {assetAvailable: 0, currencyAvailable: tools.round(this.orderDetails.currencyAvailable + (this.orderDetails.amount * this.orderDetails.price), 8), fee: this.orderDetails.transactionFee};
+    this.simulationBalance = {assetAvailable: 0, currencyAvailable: tools.round(this.orderDetails.currencyAvailable + (this.orderDetails.amount * this.orderDetails.price), 8), fee: this.orderDetails.transactionFee};
 
-	}
+  }
 
-	if (this.orderDetails.amount * this.orderDetails.price < this.exchangeapi.minimumOrderSize) {
-        // Could use some refactoring so that we don't log the two previous messages if we can't make an order anyway
-		this.logger.log('Tradeable amount is below exchange\'s minimum order size.');
-		return false;
-	}
+  if (this.orderDetails.amount * this.orderDetails.price < this.exchangeapi.minimumOrderSize) {
+    // Could use some refactoring so that we don't log the two previous messages if we can't make an order anyway
+    this.logger.log('Tradeable amount is below exchange\'s minimum order size.');
+    return false;
+  }
 
-	this.orderDetails.simulationBalance = this.simulationBalance;
+  this.orderDetails.simulationBalance = this.simulationBalance;
 
-	return true;
+  return true;
 
 };
 
 agent.prototype.placeRealOrder = function() {
 
-	if(this.orderDetails.amount <= 0) {
+  if(this.orderDetails.amount <= 0) {
 
-		this.logger.log('Insufficient funds to place an order.');
+    this.logger.log('Insufficient funds to place an order.');
 
-	} else {
+  } else {
 
-		this.exchangeapi.placeOrder(this.orderDetails.orderType, this.orderDetails.amount, this.orderDetails.price, true, this.processOrder);
+    this.exchangeapi.placeOrder(this.orderDetails.orderType, this.orderDetails.amount, this.orderDetails.price, true, this.processOrder);
 
-	}
+  }
 
 };
 
 agent.prototype.placeSimulatedOrder = function() {
 
-	if(this.orderDetails.amount <= 0) {
+  if(this.orderDetails.amount <= 0) {
 
-		this.logger.log('Insufficient funds to place an order.');
+    this.logger.log('Insufficient funds to place an order.');
 
-	} else {
+  } else {
 
-		this.orderDetails.order = 'Simulated';
+    this.orderDetails.order = 'Simulated';
 
-		this.orderDetails.status = 'filled';
+    this.orderDetails.status = 'filled';
 
-		this.logger.log('Placed simulated ' + this.orderDetails.orderType + ' order: (' + this.orderDetails.amount + '@' + this.orderDetails.price + ')');
+    this.logger.log('Placed simulated ' + this.orderDetails.orderType + ' order: (' + this.orderDetails.amount + '@' + this.orderDetails.price + ')');
 
-		this.emit('simulatedOrder', this.orderDetails);
+    this.emit('simulatedOrder', this.orderDetails);
 
-	}
+  }
 
 };
 
 agent.prototype.processOrder = function(err, order) {
 
-	if(!order) {
+  if(!order) {
 
-		this.logger.log('Something went wrong when placing the ' + this.orderDetails.orderType + ' order.');
+    this.logger.log('Something went wrong when placing the ' + this.orderDetails.orderType + ' order.');
 
-	} else {
+  } else {
 
-		this.orderDetails.order = order.txid;
+    this.orderDetails.order = order.txid;
 
-		this.orderDetails.status = order.status;
+    this.orderDetails.status = order.status;
 
-		this.logger.log('Placed ' + this.orderDetails.orderType + ' order: ' + this.orderDetails.order + ' (' + this.orderDetails.amount + '@' + this.orderDetails.price + ')');
+    this.logger.log('Placed ' + this.orderDetails.orderType + ' order: ' + this.orderDetails.order + ' (' + this.orderDetails.amount + '@' + this.orderDetails.price + ')');
 
-		this.emit('realOrder', this.orderDetails);
+    this.emit('realOrder', this.orderDetails);
 
-	}
+  }
 
 };
 

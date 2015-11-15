@@ -8,8 +8,5 @@ charset = utf-8
 trim_trailing_whitespace = true
 insert_final_newline = true
 
-[config-sample.js, candleaggregator.js, storage.js, tradingagent.js, tradingadvisor.js]
-indent_style = tab
-
 [*.md]
 trim_trailing_whitespace = false
