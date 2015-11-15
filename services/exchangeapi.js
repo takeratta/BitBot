@@ -28,6 +28,9 @@ var api = function(exchangeSettings, apiSettings, logger) {
 
   }
 
+  this.orderPriceMaxDecimals = this.selectedExchange.orderPriceMaxDecimals || 8;
+  this.minimumOrderSize = this.selectedExchange.minimumOrderSize || 0;
+
   _.bindAll(this, 'getTrades', 'getBalance', 'getOrderBook', 'placeOrder', 'orderFilled' ,'cancelOrder');
 
 };

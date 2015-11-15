@@ -32,7 +32,9 @@ agent.prototype.order = function(orderType) {
 
 	var process = function (err, result) {
 
-		this.calculateOrder(result);
+		if(!this.calculateOrder(result)) {
+			return false;
+		}
 
 		if(this.tradingEnabled) {
 			this.placeRealOrder();
@@ -109,7 +111,7 @@ agent.prototype.calculateOrder = function(result) {
 
 		this.logger.log('Lowest Ask: ' + lowestAsk + ' Lowest Ask With Slippage: ' + lowestAskWithSlippage);
 
-		this.orderDetails.price = lowestAskWithSlippage;
+		this.orderDetails.price = tools.round(lowestAskWithSlippage, this.exchangeapi.orderPriceMaxDecimals);
 		this.orderDetails.amount = tools.floor(balance / this.orderDetails.price, 8);
 
 		this.simulationBalance = {assetAvailable: tools.round(this.orderDetails.assetAvailable +  this.orderDetails.amount,8), currencyAvailable: 0, fee: this.orderDetails.transactionFee};
@@ -122,14 +124,22 @@ agent.prototype.calculateOrder = function(result) {
 
 		this.logger.log('Highest Bid: ' + highestBid + ' Highest Bid With Slippage: ' + highestBidWithSlippage);
 
-		this.orderDetails.price = highestBidWithSlippage;
+		this.orderDetails.price = tools.round(highestBidWithSlippage, this.exchangeapi.orderPriceMaxDecimals);
 		this.orderDetails.amount = tools.round(this.orderDetails.assetAvailable - this.tradingReserveAsset, 8);
 
 		this.simulationBalance = {assetAvailable: 0, currencyAvailable: tools.round(this.orderDetails.currencyAvailable + (this.orderDetails.amount * this.orderDetails.price), 8), fee: this.orderDetails.transactionFee};
 
 	}
 
+	if (this.orderDetails.amount * this.orderDetails.price < this.exchangeapi.minimumOrderSize) {
+        // Could use some refactoring so that we don't log the two previous messages if we can't make an order anyway
+		this.logger.log('Tradeable amount is below exchange\'s minimum order size.');
+		return false;
+	}
+
 	this.orderDetails.simulationBalance = this.simulationBalance;
+
+	return true;
 
 };
 
