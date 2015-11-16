@@ -3,12 +3,12 @@ var tools = require('../util/tools.js');
 
 var aggregator = function(candleStickSizeMinutes, storage, logger) {
 
-	this.storage = storage;
-	this.candleStickSizeMinutes = candleStickSizeMinutes;
-	this.logger = logger;
-	this.previousCompleteCandleStickPeriod = 0;
+  this.storage = storage;
+  this.candleStickSizeMinutes = candleStickSizeMinutes;
+  this.logger = logger;
+  this.previousCompleteCandleStickPeriod = 0;
 
-	_.bindAll(this, 'update', 'setCandleStickSize');
+  _.bindAll(this, 'update', 'setCandleStickSize');
 
 };
 
@@ -20,50 +20,50 @@ Util.inherits(aggregator, EventEmitter);
 
 aggregator.prototype.update = function() {
 
-	this.storage.getLastCompleteAggregatedCandleStick(this.candleStickSizeMinutes, function(err, completeCandleStick) {
+  this.storage.getLastCompleteAggregatedCandleStick(this.candleStickSizeMinutes, function(err, completeCandleStick) {
 
-		if(completeCandleStick) {
+    if(completeCandleStick) {
 
-			if(this.previousCompleteCandleStickPeriod === 0) {
+      if(this.previousCompleteCandleStickPeriod === 0) {
 
-				this.previousCompleteCandleStickPeriod = completeCandleStick.period;
+        this.previousCompleteCandleStickPeriod = completeCandleStick.period;
 
-			}
+      }
 
-			if(completeCandleStick.period !== this.previousCompleteCandleStickPeriod) {
+      if(completeCandleStick.period !== this.previousCompleteCandleStickPeriod) {
 
-				this.logger.log('Created a new ' + this.candleStickSizeMinutes + ' minute candlestick!');
-				this.logger.log(JSON.stringify(completeCandleStick));
+        this.logger.log('Created a new ' + this.candleStickSizeMinutes + ' minute candlestick!');
+        this.logger.log(JSON.stringify(completeCandleStick));
 
-				this.previousCompleteCandleStickPeriod = completeCandleStick.period;
+        this.previousCompleteCandleStickPeriod = completeCandleStick.period;
 
-				this.storage.removeOldDBCandles(this.candleStickSizeMinutes, function(err) {
+        this.storage.removeOldDBCandles(this.candleStickSizeMinutes, function(err) {
 
-					this.emit('update', completeCandleStick);
+          this.emit('update', completeCandleStick);
 
-				}.bind(this));
+        }.bind(this));
 
-			}
+      }
 
-		}
+    }
 
-	}.bind(this));
+  }.bind(this));
 
 };
 
 aggregator.prototype.setCandleStickSize = function(candleStickSizeMinutes) {
 
-	this.candleStickSizeMinutes = candleStickSizeMinutes;
+  this.candleStickSizeMinutes = candleStickSizeMinutes;
 
-	this.storage.getLastCompleteAggregatedCandleStick(this.candleStickSizeMinutes, function(err, completeCandleStick) {
+  this.storage.getLastCompleteAggregatedCandleStick(this.candleStickSizeMinutes, function(err, completeCandleStick) {
 
-		if(completeCandleStick) {
+    if(completeCandleStick) {
 
-			this.previousCompleteCandleStickPeriod = completeCandleStick.period;
+      this.previousCompleteCandleStickPeriod = completeCandleStick.period;
 
-		}
+    }
 
-	}.bind(this));
+  }.bind(this));
 
 };
 
