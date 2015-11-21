@@ -71,7 +71,13 @@ var trader = function() {
 
   advisor.on('advice', function(result) {
 
-    this.logger.log('Advice: ' + result.advice + ' (' + result.indicatorValue + ')');
+    var indicatorValueStr = result.indicatorValue ? ' (' + result.indicatorValue + ')' : '';
+    var adviceStr = result.isStart ? 'Start advice: ' : 'Advice: ';
+    this.logger.log(adviceStr + result.advice + indicatorValueStr);
+
+    if (!config.tradeAtStart && result.isStart) {
+      return false;
+    }
 
     if(result.advice === 'buy') {
 

@@ -43,7 +43,10 @@ advisor.prototype.start = function(callback) {
 
   this.storage.getLastNCompleteAggregatedCandleSticks(1000, this.candleStickSize, function(err, candleSticks) {
 
-    this.latestTradeAdvice = {advice: 'hold'};
+    this.latestTradeAdvice = {
+      advice: 'hold',
+      isStart: true
+    };
 
     for(var i = 0; i < candleSticks.length; i++) {
 
@@ -51,11 +54,11 @@ advisor.prototype.start = function(callback) {
 
       if(['buy', 'sell', 'hold'].indexOf(result.advice) >= 0) {
         if(['buy', 'sell'].indexOf(result.advice) >= 0) {
-          this.latestTradeAdvice = result;
+          _.extend(this.latestTradeAdvice, result);
         }
       } else {
-        var err = new Error('Invalid advice from indicator, should be either: buy, sell or hold.');
-        this.logger.error(err.stack);
+        var _err = new Error('Invalid advice from indicator, should be either: buy, sell or hold.');
+        this.logger.error(_err.stack);
         process.exit();
       }
 
