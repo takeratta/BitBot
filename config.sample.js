@@ -45,6 +45,8 @@ config.mongoConnectionString = 'localhost/bitbot';
 //------------------------------downloaderSettings
 config.downloaderRefreshSeconds = 10;
 // Best to keep this default setting unless you know what you are doing.
+config.downloaderMaxFails = 30;
+// After failing to retrieve trade data n times the application will quit. A value of 0 prevents quitting.
 //------------------------------downloaderSettings
 
 //------------------------------IndicatorSettings

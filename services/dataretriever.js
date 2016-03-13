@@ -1,9 +1,10 @@
 var _ = require('underscore');
 var async = require('async');
 
-var downloader = function(refreshInterval, exchangeapi, logger){
+var downloader = function(refreshInterval, maxFails, exchangeapi, logger){
 
   this.refreshInterval = refreshInterval;
+  this.maxFails = maxFails;
   this.noTradesCount = 0;
   this.exchangeapi = exchangeapi;
   this.logger = logger;
@@ -30,8 +31,8 @@ downloader.prototype.processTrades = function(err, trades) {
 
     this.noTradesCount += 1;
 
-    if(this.noTradesCount >= 30) {
-      this.logger.error('Haven\'t received data from the Exchange API for 30 consecutive attempts, stopping application');
+    if(this.maxFails && this.noTradesCount >= this.maxFails) {
+      this.logger.error('Haven\'t received data from the Exchange API for '+ this.noTradesCount +' consecutive attempts, quitting application');
       return process.exit();
     }
 
