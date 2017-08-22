@@ -36,7 +36,7 @@ var logger = function(app, debug, prefix) {
       new (winston.transports.Console)({
         'timestamp': now,
         level: 'INFO' }),
-      new (winston.transports.DailyRotateFile)({
+      new (require('winston-daily-rotate-file'))({
         'timestamp': now,
         datePattern: '_dd-MM-yyyy.log',
         filename: 'logs/' + app,
