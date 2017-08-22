@@ -20,26 +20,33 @@ storage.prototype.push = function(csArray, callback) {
   var csDatastore = mongo(this.mongoConnectionString);
   var csCollection = csDatastore.collection(this.exchangePair);
 
-  var bulk = csCollection.initializeOrderedBulkOp();
+  function chunk (arr, len) {
+    var chunks = [],
+        i = 0,
+        n = arr.length;
 
-  _.forEach(csArray, function(cs) {
-    bulk.find({period: cs.period}).upsert().updateOne(cs);
-  });
-
-  bulk.execute(function(err, res) {
-
-    csDatastore.close();
-
-    if(err) {
-
-      callback(err);
-
-    } else {
-
-      callback(null);
-
+    while (i < n) {
+      chunks.push(arr.slice(i, i += len));
     }
 
+    return chunks;
+  }
+
+  var chunks = chunk(csArray, 1000);
+
+  async.eachSeries(chunks, function(chunk, next) {
+    var bulk = csCollection.initializeOrderedBulkOp();
+
+    _.forEach(chunk, function(cs) {
+      bulk.find({period: cs.period}).upsert().updateOne(cs);
+    });
+
+    bulk.execute(function(err, res) {
+       next(err);
+    });
+  }, function(err) {
+    csDatastore.close();
+    callback(err);
   });
 
 };
