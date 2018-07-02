@@ -15,10 +15,13 @@
     "pushover-notifications": "0.2.4",
     "underscore": "1.8.3",
     "winston": "2.3.1",
-    "winston-daily-rotate-file": "^1.4.6"
+    "winston-daily-rotate-file": "^1.4.6",
+    "snyk": "^1.88.0"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "snyk-protect": "snyk protect",
+    "prepare": "npm run snyk-protect"
   },
   "repository": {
     "type": "git",
@@ -30,5 +33,6 @@
     "Bot"
   ],
   "author": "Ruben Callewaert",
-  "license": "Apache License"
+  "license": "Apache License",
+  "snyk": true
 }
