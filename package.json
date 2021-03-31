@@ -13,7 +13,7 @@
     "moment": "2.18.1",
     "mongojs": "2.4.1",
     "pushover-notifications": "0.2.4",
-    "underscore": "1.8.3",
+    "underscore": "1.12.1",
     "winston": "2.3.1",
     "winston-daily-rotate-file": "^1.4.6"
   },
