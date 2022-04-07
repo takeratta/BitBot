@@ -4,7 +4,7 @@
   "description": "Crypto-Currency Trading Bot",
   "main": "app.js",
   "dependencies": {
-    "async": "2.5.0",
+    "async": "3.2.2",
     "bitstamp-api": "0.2.0",
     "btc-e": "1.0.5",
     "flat": "4.0.0",
